@@ -20,9 +20,20 @@ Linux
 curl -fsSL https://get.pnpm.io/install.sh | sh -
 ```
 
-### Build TechnicalSketcher
+### Install dependencies
 
 ```bash
 pnpm install
+```
+
+### Run TechnicalSketcher in dev mode
+
+```bash
 pnpm tauri dev
+```
+
+### Build the installer
+
+```bash
+pnpm tauri build
 ```
