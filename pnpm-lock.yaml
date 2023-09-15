@@ -8,12 +8,18 @@ dependencies:
   '@tauri-apps/api':
     specifier: ^1.4.0
     version: 1.4.0
+  '@types/vec2':
+    specifier: ^1.6.2
+    version: 1.6.2
   react:
     specifier: ^18.2.0
     version: 18.2.0
   react-dom:
     specifier: ^18.2.0
     version: 18.2.0(react@18.2.0)
+  react-gridlines:
+    specifier: ^1.1.7
+    version: 1.1.7(react@18.2.0)
 
 devDependencies:
   '@tauri-apps/cli':
@@ -658,6 +664,10 @@ packages:
     resolution: {integrity: sha512-5cJ8CB4yAx7BH1oMvdU0Jh9lrEXyPkar6F9G/ERswkCuvP4KQZfZkSjcMbAICCpQTN4OuZn8tz0HiKv9TGZgrQ==}
     dev: true
 
+  /@types/vec2@1.6.2:
+    resolution: {integrity: sha512-UrdM+KuYbQXgOuSmpT95pjC67xubSXF5jHZXbQct0TiahTM9XdRIbEHCzzFIrZv+QSVr4NwHP8V6qg4sr01WAg==}
+    dev: false
+
   /@vitejs/plugin-react@4.0.4(vite@4.4.9):
     resolution: {integrity: sha512-7wU921ABnNYkETiMaZy7XqpueMnpu5VxvVps13MjmCo+utBdD79sZzrApHawHtVX66cCJQQTXFcjH0y9dSUK8g==}
     engines: {node: ^14.18.0 || >=16.0.0}
@@ -1013,6 +1023,10 @@ packages:
     hasBin: true
     dev: true
 
+  /js-base64@3.7.5:
+    resolution: {integrity: sha512-3MEt5DTINKqfScXKfJFrRbxkrnk2AxPWGBL/ycjz4dK8iqiSJ06UxD8jh8xuh6p10TX4t2+7FsBYVxxQbMg+qA==}
+    dev: false
+
   /js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
@@ -1227,6 +1241,15 @@ packages:
       loose-envify: 1.4.0
       react: 18.2.0
       scheduler: 0.23.0
+    dev: false
+
+  /react-gridlines@1.1.7(react@18.2.0):
+    resolution: {integrity: sha512-7Hb2pJ9HXHaYD2cZHAroL2lUrOjQSappdN/aPSJqv7fYpiyq6ePUtf8qMnCxJdKlEEgo2jcGrMbaKCkdiTvEQw==}
+    peerDependencies:
+      react: '>= 16.10.0'
+    dependencies:
+      js-base64: 3.7.5
+      react: 18.2.0
     dev: false
 
   /react-refresh@0.14.0:
