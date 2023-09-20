@@ -23,51 +23,51 @@ function EditorGridSvg(props: EditorGridSvgProps) {
 
     let jsx: any = [];
 
-    for (var x = -200; x <= 200; x += 20) {
-        for (var y = -200; y <= 200; y += 20) {
+    for (var x = 0; x <= 100; x += 5) {
+        for (var y = 0; y <= 100; y += 5) {
             console.log("render");
             jsx.push(
                 <>
                     <line
-                        x1={x - 5}
-                        y1={y - 5}
-                        x2={x + 5}
-                        y2={y + 5}
+                        x1={x - 0.5}
+                        y1={y - 0.5}
+                        x2={x + 0.5}
+                        y2={y + 0.5}
                         stroke="red"
                     />
                     <line
-                        x1={x + 5}
-                        y1={y - 5}
-                        x2={x - 5}
-                        y2={y + 5}
+                        x1={x + 0.5}
+                        y1={y - 0.5}
+                        x2={x - 0.5}
+                        y2={y + 0.5}
                         stroke="red"
                     />
                     <line
-                        x1={x - 10}
-                        y1={y - 10}
-                        x2={x - 10}
-                        y2={y + 10}
+                        x1={x - 1}
+                        y1={y - 1}
+                        x2={x - 1}
+                        y2={y + 1}
                         stroke="green"
                     />
                     <line
-                        x1={x - 10}
-                        y1={y + 10}
-                        x2={x + 10}
-                        y2={y + 10}
+                        x1={x - 1}
+                        y1={y + 1}
+                        x2={x + 1}
+                        y2={y + 1}
                         stroke="green"
                     />
                     <line
-                        x1={x + 10}
-                        y1={y + 10}
-                        x2={x + 10}
-                        y2={y - 10}
+                        x1={x + 1}
+                        y1={y + 1}
+                        x2={x + 1}
+                        y2={y - 1}
                         stroke="green"
                     />
                     <line
-                        x1={x + 10}
-                        y1={y - 10}
-                        x2={x - 10}
-                        y2={y - 10}
+                        x1={x + 1}
+                        y1={y - 1}
+                        x2={x - 1}
+                        y2={y - 1}
                         stroke="green"
                     />
                 </>

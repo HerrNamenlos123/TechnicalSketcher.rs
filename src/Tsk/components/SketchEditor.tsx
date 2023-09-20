@@ -26,6 +26,7 @@ function SketchEditor() {
         svgRef.current?.clientHeight
     );
     const zoomSpeed = 0.001;
+    const canvasSize = new Vec2(210, 297);
 
     const [gestureCache, setGestureCache] = useState<
         PointerEvent<SVGSVGElement>[]
@@ -195,24 +196,37 @@ function SketchEditor() {
     //     </TransformWrapper>
     // );
 
+    const parentDivRef = useRef<HTMLDivElement>(null);
+
     return (
-        <>
-            <TransformWrapper>
-                <TransformComponent>
+        <div ref={parentDivRef} style={{ width: "100%", height: "100%" }}>
+            <TransformWrapper
+                limitToBounds={true}
+                minScale={0.1}
+                maxScale={100}
+            >
+                <TransformComponent
+                    contentStyle={{
+                        width: `${canvasSize.x}px`,
+                        height: `${canvasSize.y}px`,
+                    }}
+                    wrapperStyle={{
+                        width: `100%`,
+                        height: `100%`,
+                    }}
+                >
                     <svg
                         ref={svgRef}
                         xmlns="http://www.w3.org/2000/svg"
-                        viewBox={`${leftUpperVPCorner.x} ${leftUpperVPCorner.y} ${viewportSizeSVG.x} ${viewportSizeSVG.y}`}
+                        viewBox={`${-canvasSize.x / 2} ${-canvasSize.y / 2} ${
+                            canvasSize.x
+                        } ${canvasSize.y}`}
                         preserveAspectRatio="none"
-                        style={{ width: "100%", height: "100%" }}
-                        // onMouseMove={(ev) => onMouseMove(ev)}
-                        onWheel={(ev) => onWheel(ev)}
-                        onPointerDown={(ev) => onPointerDown(ev)}
-                        onPointerMove={(ev) => onPointerMove(ev)}
-                        onPointerUp={(ev) => onPointerUp(ev)}
-                        onPointerCancel={(ev) => onPointerUp(ev)}
-                        onPointerOut={(ev) => onPointerUp(ev)}
-                        onPointerLeave={(ev) => onPointerUp(ev)}
+                        style={{
+                            width: `100%`,
+                            height: `100%`,
+                            boxShadow: "0 0 5px 1px #999",
+                        }}
                     >
                         <EditorGridSvg
                             // zoom={zoom}
@@ -226,7 +240,7 @@ function SketchEditor() {
                     </svg>
                 </TransformComponent>
             </TransformWrapper>
-        </>
+        </div>
     );
 }
 
