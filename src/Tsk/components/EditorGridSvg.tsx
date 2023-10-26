@@ -23,11 +23,11 @@ function EditorGridSvg(props: EditorGridSvgProps) {
 
     let jsx: any = [];
 
-    for (var x = 0; x <= 100; x += 5) {
-        for (var y = 0; y <= 100; y += 5) {
+    for (var x = 0; x <= 100; x += 1) {
+        for (var y = 0; y <= 100; y += 1) {
             console.log("render");
             jsx.push(
-                <>
+                <React.Fragment key={x * 100 + y}>
                     <line
                         x1={x - 0.5}
                         y1={y - 0.5}
@@ -70,7 +70,7 @@ function EditorGridSvg(props: EditorGridSvgProps) {
                         y2={y - 1}
                         stroke="green"
                     />
-                </>
+                </React.Fragment>
             );
         }
     }

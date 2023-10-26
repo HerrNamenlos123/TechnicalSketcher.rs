@@ -204,6 +204,12 @@ function SketchEditor() {
                 limitToBounds={true}
                 minScale={0.1}
                 maxScale={100}
+                // initialPositionX={100}
+                // initialPositionY={100}
+                // centerZoomedOut={true}
+                onZoom={() => console.log("Zoom")}
+                onZoomStart={() => console.log("Start")}
+                onZoomStop={() => console.log("Stop")}
             >
                 <TransformComponent
                     contentStyle={{
