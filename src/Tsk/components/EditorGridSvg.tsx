@@ -23,8 +23,9 @@ function EditorGridSvg(props: EditorGridSvgProps) {
 
     let jsx: any = [];
 
-    for (var x = 0; x <= 100; x += 1) {
-        for (var y = 0; y <= 100; y += 1) {
+    const width = 0.1;
+    for (var x = 0; x <= 10; x += 1) {
+        for (var y = 0; y <= 10; y += 1) {
             console.log("render");
             jsx.push(
                 <React.Fragment key={x * 100 + y}>
@@ -34,6 +35,7 @@ function EditorGridSvg(props: EditorGridSvgProps) {
                         x2={x + 0.5}
                         y2={y + 0.5}
                         stroke="red"
+                        strokeWidth={width}
                     />
                     <line
                         x1={x + 0.5}
@@ -41,6 +43,7 @@ function EditorGridSvg(props: EditorGridSvgProps) {
                         x2={x - 0.5}
                         y2={y + 0.5}
                         stroke="red"
+                        strokeWidth={width}
                     />
                     <line
                         x1={x - 1}
@@ -48,6 +51,7 @@ function EditorGridSvg(props: EditorGridSvgProps) {
                         x2={x - 1}
                         y2={y + 1}
                         stroke="green"
+                        strokeWidth={width}
                     />
                     <line
                         x1={x - 1}
@@ -55,6 +59,7 @@ function EditorGridSvg(props: EditorGridSvgProps) {
                         x2={x + 1}
                         y2={y + 1}
                         stroke="green"
+                        strokeWidth={width}
                     />
                     <line
                         x1={x + 1}
@@ -62,6 +67,7 @@ function EditorGridSvg(props: EditorGridSvgProps) {
                         x2={x + 1}
                         y2={y - 1}
                         stroke="green"
+                        strokeWidth={width}
                     />
                     <line
                         x1={x + 1}
@@ -69,6 +75,7 @@ function EditorGridSvg(props: EditorGridSvgProps) {
                         x2={x - 1}
                         y2={y - 1}
                         stroke="green"
+                        strokeWidth={width}
                     />
                 </React.Fragment>
             );
