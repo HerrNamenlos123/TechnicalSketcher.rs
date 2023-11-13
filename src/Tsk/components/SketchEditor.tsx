@@ -137,6 +137,7 @@ function SketchEditor() {
             <div id="canvasHost"
                 ref={canvasHostRef}
                 style={{
+                    position: "relative",
                     width: "100%",
                     height: "100%",
                     touchAction: "none",
@@ -155,7 +156,7 @@ function SketchEditor() {
                 <div id="canvas"
                     ref={canvasRef}
                     style={{
-                        position: "relative",
+                        position: "absolute",
                         left: `calc(50% - ${canvasSize.x / 2}px * ${zoom} + ${centerPositionPx.x}px)`,
                         top: `calc(50% - ${canvasSize.y / 2}px * ${zoom} + ${centerPositionPx.y}px)`,
                         width: `calc(${canvasSize.x}px * ${zoom})`,
