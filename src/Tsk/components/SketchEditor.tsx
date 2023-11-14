@@ -4,10 +4,15 @@ import {
     useCallback,
     useEffect,
     useRef,
+    useMemo,
     useState,
 } from "react";
 import EditorGridSvg from "./EditorGridSvg";
+import toImg from 'react-svg-to-image';
+import debounce from "lodash";
+import html2canvas from "html2canvas";
 import Vec2 from "../types/Vector";
+import { Canvg, presets } from "canvg";
 import useMousePosition from "../hooks/MousePosition";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
@@ -22,10 +27,11 @@ function SketchEditor() {
     const [canvasMousePosPx, setCanvasMousePosPx] = useState(new Vec2(0, 0));
     const canvasHostRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
-    const actualCanvasSize = new Vec2(
-        canvasRef.current?.clientWidth,
-        canvasRef.current?.clientHeight
-    );
+    const svgRef = useRef<SVGSVGElement>(null);
+    const actualCanvasHostSize = () => 
+        new Vec2(canvasHostRef.current?.clientWidth, canvasHostRef.current?.clientHeight);
+    const actualCanvasSize = () => 
+        new Vec2(canvasRef.current?.clientWidth, canvasRef.current?.clientHeight);
     const zoomSpeed = 0.001;
     const canvasSize = new Vec2(210, 297);
 
@@ -34,12 +40,50 @@ function SketchEditor() {
     let [lastAverageGesturePos, setLastAverageGesturePos] = useState(
         new Vec2(-1, -1)
     );
+    let [prerenderedCanvasUrl, setPrerenderedCanvasUrl] = useState("");
+
+    async function dso() {
+        console.log("Prerendering");
+
+        if (canvasHostRef.current !== null) {
+            const canvasHostSize = actualCanvasHostSize();
+
+            console.log(`Prerendering ${canvasHostSize.x}x${canvasHostSize.y}`)
+
+            const canvas = new OffscreenCanvas(canvasHostSize.x, canvasHostSize.y);
+            const ctx = canvas.getContext('2d')
+            if (ctx !== null) {
+                const cv = await Canvg.from(ctx, 
+                    svgRef.current?.outerHTML ?? "",
+                    presets.offscreen());
+                await cv.render();
+                const blob = await canvas.convertToBlob()
+                const pngUrl = URL.createObjectURL(blob)
+                setPrerenderedCanvasUrl(pngUrl);
+            }
+
+            // setPrerenderedSvg(cv);
+            // console.log(cv);
+            // console.log(canvas);
+        }
+
+        console.log("Prerendering done")
+    }
+
+    function prerender() {
+        dso();
+        console.log("dso end")
+    }
+
+    const canvasScaledDebounce = useMemo(() => debounce.debounce(() => {
+        prerender();
+    }, 200), []);
 
     function onMouseMove(ev: React.MouseEvent<HTMLDivElement, MouseEvent>) {
         const delta = new Vec2(ev.movementX, ev.movementY);
         const mousePos = new Vec2(
-            ev.clientX - (canvasRef.current?.offsetLeft ?? 0) - actualCanvasSize.x / 2,
-            ev.clientY - (canvasRef.current?.offsetTop ?? 0) - actualCanvasSize.y / 2
+            ev.clientX - (canvasRef.current?.offsetLeft ?? 0) - actualCanvasSize().x / 2,
+            ev.clientY - (canvasRef.current?.offsetTop ?? 0) - actualCanvasSize().y / 2
         );
         setCanvasMousePosPx(mousePos);
         if (ev.buttons === 1) {
@@ -51,7 +95,6 @@ function SketchEditor() {
     function onWheel(event: WheelEvent<HTMLDivElement>) {
         let zoomAmount = event.deltaY * zoomSpeed;      // This is a bit greater or smaller than 0, depending on the direction
 
-        for (let i = 0; i < 1; i++) {
         const canvasHostPos = new Vec2(event.currentTarget.getBoundingClientRect().x, event.currentTarget.getBoundingClientRect().y);
         const canvasHostSize = new Vec2(canvasHostRef.current?.clientWidth, canvasHostRef.current?.clientHeight);
         const mousePosCanvasHost = new Vec2(event.clientX, event.clientY).sub(canvasHostPos);
@@ -62,7 +105,9 @@ function SketchEditor() {
         setZoom(zoom);
         centerPositionPx = centerPositionPx.sub(mousePosCanvasCenter.mul(zoomAmount));
         setCenterPositionPx(centerPositionPx);
-    }
+
+        // Debounce
+        canvasScaledDebounce();
     }
 
     function onPointerDown(event: PointerEvent<HTMLDivElement>) {
@@ -165,26 +210,36 @@ function SketchEditor() {
                         boxShadow: "0 0 5px 1px #999",
                     }}
                 >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox={`${-canvasSize.x / 2} ${-canvasSize.y / 2} ${canvasSize.x} ${canvasSize.y}`}
-                        preserveAspectRatio="none"
-                        style={{
-                            width: `100%`,
-                            height: `100%`,
-                        }}
-                    >
-                        <EditorGridSvg
-                            // zoom={zoom}
-                            // centerPositionPx={centerPositionPx}
-                            lineWidth={1}
-                            opacity={1}
-                            color="#00FF00"
-                            canvasColor="#FF0000"
-                            // onMouseMove={funcCallback}
-                        />
-                    </svg>
+                    <img src={prerenderedCanvasUrl} style={{
+                        width: "100%",
+                        height: "100%",
+                    }}></img>
+                    <div style={{ display: 'none', width: "100%", height: "100%" }}>
+                        <svg
+                            id="tskCanvasSvg"
+                            ref={svgRef}
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox={`${-canvasSize.x / 2} ${-canvasSize.y / 2} ${canvasSize.x} ${canvasSize.y}`}
+                            preserveAspectRatio="none"
+                            style={{
+                                width: `100%`,
+                                height: `100%`,
+                                visibility: "visible",
+                            }}
+                        >
+                            <EditorGridSvg
+                                // zoom={zoom}
+                                // centerPositionPx={centerPositionPx}
+                                lineWidth={1}
+                                opacity={1}
+                                color="#00FF00"
+                                canvasColor="#FF0000"
+                                // onMouseMove={funcCallback}
+                            />
+                        </svg>
+                    </div>
                 </div>
+                
             {/* <div
                 style={{
                     position: "relative",
