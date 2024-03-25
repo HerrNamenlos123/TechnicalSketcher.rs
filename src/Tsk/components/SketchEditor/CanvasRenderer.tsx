@@ -25,6 +25,63 @@ export class CanvasRenderer {
         c.stroke();
     }
 
+    renderGrid() {
+        const c = this.ctx;
+
+        // Vertical lines
+        c.beginPath();
+        c.moveTo(this.pan.x, 0);
+        c.lineTo(this.pan.x, c.canvas.height);
+        c.strokeStyle = "black";
+        c.lineWidth = 1
+        c.stroke();
+
+        const gridSize = this.objectToCanvasDistance(1);
+        let index = 1;
+        for (let x = this.pan.x; x < c.canvas.width; x += gridSize) {
+            c.beginPath();
+            c.moveTo(x, 0);
+            c.lineTo(x, c.canvas.height);
+            c.stroke();
+            c.lineWidth = (index % 10 == 0) ? 1 : 0.4;
+            index++;
+        }
+        index = 1;
+        for (let x = this.pan.x; x > 0; x -= gridSize) {
+            c.beginPath();
+            c.moveTo(x, 0);
+            c.lineTo(x, c.canvas.height);
+            c.stroke();
+            c.lineWidth = (index % 10 == 0) ? 1 : 0.4;
+            index++;
+        }
+        
+        // Horizontal lines
+        c.beginPath();
+        c.moveTo(0, this.pan.y);
+        c.lineTo(c.canvas.width, this.pan.y);
+        c.stroke();
+
+        index = 1;
+        for (let y = this.pan.y; y < c.canvas.height; y += gridSize) {
+            c.beginPath();
+            c.moveTo(0, y);
+            c.lineTo(c.canvas.width, y);
+            c.stroke();
+            c.lineWidth = (index % 10 == 0) ? 1 : 0.4;
+            index++;
+        }
+        index = 1;
+        for (let y = this.pan.y; y > 0; y -= gridSize) {
+            c.beginPath();
+            c.moveTo(0, y);
+            c.lineTo(c.canvas.width, y);
+            c.stroke();
+            c.lineWidth = (index % 10 == 0) ? 1 : 0.4;
+            index++;
+        }
+    }
+
     drawShapes() {
         const c = this.ctx;
         c.fillStyle = "red";
@@ -63,6 +120,7 @@ export class CanvasRenderer {
         this.pan = pan;
         this.zoom = zoom;
         this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+        this.renderGrid();
         this.drawShapes();
     };
 }
