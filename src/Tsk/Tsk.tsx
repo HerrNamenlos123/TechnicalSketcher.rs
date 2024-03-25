@@ -1,5 +1,5 @@
 import Toolbar from "./components/Toolbar";
-import SketchEditor from "./components/SketchEditor";
+import SketchEditor from "./components/SketchEditor/SketchEditor";
 
 function Tsk() {
     return (
