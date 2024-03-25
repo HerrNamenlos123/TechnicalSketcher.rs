@@ -13,7 +13,7 @@ interface ToolbarProps {
 function Toolbar(props: ToolbarProps) {
     return (
     <Navbar className="bg-body-tertiary justify-content-between" data-bs-theme="dark">
-      <Form inline>
+      <Form>
         <InputGroup>
           <InputGroup.Text id="basic-addon1">@</InputGroup.Text>
           <Form.Control
@@ -23,7 +23,7 @@ function Toolbar(props: ToolbarProps) {
           />
         </InputGroup>
       </Form>
-      <Form inline>
+      <Form>
         <Row>
           <Col xs="auto">
             <Form.Control

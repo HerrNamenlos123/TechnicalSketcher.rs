@@ -11,4 +11,8 @@
 html,
 body {
   overflow: hidden;
+
+  /* Disable browser gesture to swipe right to return */
+  overscroll-behavior: none;
+  touch-action: none;
 }

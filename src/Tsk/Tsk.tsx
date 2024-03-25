@@ -12,7 +12,7 @@ function Tsk() {
             }}
         >
             <Toolbar height={10} />
-            <SketchEditor />
+            <SketchEditor zoomSensitivity={0.001} invertMouse={false}/>
         </div>
     );
 }

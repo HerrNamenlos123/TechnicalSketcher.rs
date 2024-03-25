@@ -7,7 +7,10 @@ import React, {
 import Vec2 from "../../types/Vector";
 import { CanvasRenderer } from "./CanvasRenderer";
 
-interface Props {}
+interface Props {
+    zoomSensitivity: number;
+    invertMouse: boolean;
+}
 
 interface State {
     canvasContext: CanvasRenderingContext2D | null;
@@ -17,7 +20,7 @@ interface State {
 
 class SketchEditor extends Component<Props, State> {
     canvasRef: React.RefObject<HTMLCanvasElement>;
-    canvasRenderer: CanvasRenderer;
+    canvasRenderer: CanvasRenderer | undefined;
     prevMouse: Vec2;
 
     constructor(props: Props) {
@@ -28,7 +31,6 @@ class SketchEditor extends Component<Props, State> {
             zoom: 1,
         };
         this.canvasRef = React.createRef<HTMLCanvasElement>();
-        this.canvasRenderer = new CanvasRenderer();
         this.prevMouse = new Vec2();
 
         // Binding the functions to the instance
@@ -36,18 +38,21 @@ class SketchEditor extends Component<Props, State> {
         this.handleWheel = this.handleWheel.bind(this);
     }
 
+    handlePanDelta(delta: Vec2) {
+        this.setState(prev => ({
+            pan: prev.pan.add(delta)
+        }));
+    };
+
     handleMouseDown(e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) {
         this.prevMouse = new Vec2(e.clientX, e.clientY);
         const handleMouseMove = (e: MouseEvent) => {
             const client = new Vec2(e.clientX, e.clientY);
             const delta = client.sub(this.prevMouse);
-            this.setState(prev => ({
-                pan: prev.pan.add(delta)
-            }));
-
+            this.handlePanDelta(delta);
             this.prevMouse = client;
         };
-
+        
         const handleMouseUp = () => {
             window.removeEventListener("mousemove", handleMouseMove);
             window.removeEventListener("mouseup", handleMouseUp);
@@ -57,20 +62,31 @@ class SketchEditor extends Component<Props, State> {
         window.addEventListener("mouseup", handleMouseUp);
     };
 
-    handleWheel(e: React.WheelEvent<HTMLCanvasElement>) {
-        const zoomAmount = -e.deltaY * 0.001;
+    handleZoom(amount: number, position: Vec2) {
         const canvas = this.canvasRef.current;
         if (canvas) {
             const rect = canvas.getBoundingClientRect();
             if (rect) {
-                const client = new Vec2(e.clientX, e.clientY);
-                const mousePos = client.sub(new Vec2(rect.left, rect.top));
-                console.log(zoomAmount);
+                const mousePos = position.sub(new Vec2(rect.left, rect.top));
                 this.setState(prev => ({ 
-                    zoom: prev.zoom + prev.zoom * zoomAmount, 
-                    pan: prev.pan.sub(mousePos.sub(prev.pan).mul(zoomAmount)) 
+                    zoom: prev.zoom + prev.zoom * amount, 
+                    pan: prev.pan.sub(mousePos.sub(prev.pan).mul(amount)) 
                 }));
             }
+        }
+    }
+
+    handleWheel(e: React.WheelEvent<HTMLCanvasElement>) {
+        if (e.ctrlKey) {
+            const delta = e.deltaX + e.deltaY;
+            this.handleZoom(-delta * this.props.zoomSensitivity, new Vec2(e.clientX, e.clientY));
+        }
+        else {
+            const delta = new Vec2(-e.deltaX, -e.deltaY);
+            if (this.props.invertMouse) {
+                delta.mul(-1);
+            }
+            this.handlePanDelta(delta);
         }
     };
 
@@ -80,6 +96,7 @@ class SketchEditor extends Component<Props, State> {
             const context = canvas.getContext("2d");
             if (context) {
                 this.setState({ canvasContext: context });
+                this.canvasRenderer = new CanvasRenderer(context);
             }
         }
     }
@@ -87,8 +104,9 @@ class SketchEditor extends Component<Props, State> {
     componentDidUpdate() {
         const { canvasContext, pan, zoom } = this.state;
         if (canvasContext) {
-            this.canvasRenderer.renderCanvas(canvasContext, pan, zoom);
-            console.log("render");
+            if (this.canvasRenderer) {
+                this.canvasRenderer.renderCanvas(pan, zoom);
+            }
         }
     }
 
