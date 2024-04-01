@@ -7,19 +7,22 @@ import React, {
 import Vec2 from "../../types/Vector";
 import { CanvasRenderer } from "./CanvasRenderer";
 
-interface Props {
+interface SketchEditorProps {
     zoomSensitivity: number;
     invertMouse: boolean;
+    snapToGridCM: number;
 }
 
-interface State {
+interface SketchEditorState {
     canvasContext: CanvasRenderingContext2D | null;
     pan: Vec2;
     zoom: number;
     eventCache: React.PointerEvent<HTMLCanvasElement>[];
+    cursorPreviewPos: Vec2;
+    cursorPreviewEnabled: boolean;
 }
 
-class SketchEditor extends Component<Props, State> {
+class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
     canvasRef: React.RefObject<HTMLCanvasElement>;
     canvasRenderer: CanvasRenderer | undefined;
     lastAveragePosition: Vec2 | undefined;
@@ -30,13 +33,15 @@ class SketchEditor extends Component<Props, State> {
     prevZoomFactor: number;
     prevMousePosition: Vec2;
 
-    constructor(props: Props) {
+    constructor(props: SketchEditorProps) {
         super(props);
         this.state = {
             canvasContext: null,
             pan: new Vec2(),
-            zoom: 5,
+            zoom: 20,
             eventCache: [],
+            cursorPreviewPos: new Vec2(),
+            cursorPreviewEnabled: true,
         };
         this.canvasRef = React.createRef<HTMLCanvasElement>();
         this.lastAveragePosition = undefined;
@@ -54,29 +59,37 @@ class SketchEditor extends Component<Props, State> {
         this.pointerUpHandler = this.pointerUpHandler.bind(this);
     }
 
+    globalMouseToCanvasPos(globalMouse: Vec2): Vec2 {
+        const canvas = this.canvasRef.current;
+        if (!canvas) {
+            return new Vec2();
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        if (!rect) {
+            return new Vec2();
+        }
+        
+        return globalMouse.sub(new Vec2(rect.left, rect.top));
+    }
+
     handlePanDelta(delta: Vec2) {
         this.prevPan = this.prevPan.add(delta);
         this.setState({ pan: this.prevPan });
     };
 
     handleZoom(newGlobalFactor: number, averagePosition: Vec2) {
-        const canvas = this.canvasRef.current;
-        if (canvas) {
-            const rect = canvas.getBoundingClientRect();
-            if (rect) {
-                const averageInCanvasCoords = averagePosition.sub(new Vec2(rect.left, rect.top));
-                const averageToPrevPan = this.prevPan.sub(averageInCanvasCoords);
-                const scaledAverageToPan = averageToPrevPan.mul(newGlobalFactor / this.prevZoomFactor)
-                const newPan = averageInCanvasCoords.add(scaledAverageToPan);
-                
-                this.setState({ 
-                    zoom: newGlobalFactor, 
-                    pan: newPan 
-                });
-                this.prevPan = newPan;
-                this.prevZoomFactor = newGlobalFactor;
-            }
-        }
+        const averageInCanvasCoords = this.globalMouseToCanvasPos(averagePosition);
+        const averageToPrevPan = this.prevPan.sub(averageInCanvasCoords);
+        const scaledAverageToPan = averageToPrevPan.mul(newGlobalFactor / this.prevZoomFactor)
+        const newPan = averageInCanvasCoords.add(scaledAverageToPan);
+        
+        this.setState({ 
+            zoom: newGlobalFactor, 
+            pan: newPan 
+        });
+        this.prevPan = newPan;
+        this.prevZoomFactor = newGlobalFactor;
     }
 
     handleWheel(e: React.WheelEvent<HTMLCanvasElement>) {
@@ -158,6 +171,12 @@ class SketchEditor extends Component<Props, State> {
                 this.handlePanDelta(mouse.sub(this.prevMousePosition));
                 this.prevMousePosition = mouse;
             }
+            if (this.canvasRenderer) {
+                const mouse = this.globalMouseToCanvasPos(new Vec2(e.clientX, e.clientY));
+                const mouseCoords = this.canvasRenderer.canvasToObjectCoords(mouse);
+                const previewPos = e.shiftKey ? mouseCoords : mouseCoords.round();
+                this.setState({ cursorPreviewPos: previewPos });
+            }
         }
         else if (e.pointerType == "pen") {
 
@@ -189,16 +208,15 @@ class SketchEditor extends Component<Props, State> {
             if (context) {
                 this.setState({ canvasContext: context });
                 this.moveCanvasCenterToPoint(new Vec2(context.canvas.width / 2, context.canvas.height / 2));
-                this.canvasRenderer = new CanvasRenderer(context);
+                this.canvasRenderer = new CanvasRenderer(this.state, context);
             }
         }
     }
 
     componentDidUpdate() {
-        const { canvasContext, pan, zoom } = this.state;
-        if (canvasContext) {
+        if (this.state.canvasContext) {
             if (this.canvasRenderer) {
-                this.canvasRenderer.renderCanvas(pan, zoom);
+                this.canvasRenderer.renderCanvas(this.state);
             }
         }
     }
