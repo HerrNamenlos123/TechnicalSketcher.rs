@@ -35,7 +35,7 @@ class SketchEditor extends Component<Props, State> {
         this.state = {
             canvasContext: null,
             pan: new Vec2(),
-            zoom: 2,
+            zoom: 5,
             eventCache: [],
         };
         this.canvasRef = React.createRef<HTMLCanvasElement>();
@@ -93,6 +93,11 @@ class SketchEditor extends Component<Props, State> {
             this.handlePanDelta(delta);
         }
     };
+
+    moveCanvasCenterToPoint(point: Vec2) {
+        this.prevPan = point;
+        this.setState({ pan: this.prevPan });
+    }
 
     updatePointers() {
         if (this.state.eventCache.length !== 2) {
@@ -183,6 +188,7 @@ class SketchEditor extends Component<Props, State> {
             const context = canvas.getContext("2d");
             if (context) {
                 this.setState({ canvasContext: context });
+                this.moveCanvasCenterToPoint(new Vec2(context.canvas.width / 2, context.canvas.height / 2));
                 this.canvasRenderer = new CanvasRenderer(context);
             }
         }
