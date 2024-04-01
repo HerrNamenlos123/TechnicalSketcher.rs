@@ -35,8 +35,12 @@ class Vec2 {
         }
     }
 
-    neg() {
+    neg(): Vec2 {
         return new Vec2(-this.x, -this.y);
+    }
+
+    mag(): number {
+        return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
     }
 }
 export default Vec2;
