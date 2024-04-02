@@ -10,6 +10,9 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@fortawesome/free-solid-svg-icons": "^6.5.1",
+    "@fortawesome/react-fontawesome": "^0.2.0",
+    "@material-ui/icons": "^4.11.3",
     "@tauri-apps/api": "^1.5.3",
     "@types/vec2": "^1.6.5",
     "bootstrap": "^5.3.3",

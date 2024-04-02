@@ -10,6 +10,10 @@ export class CanvasRenderer {
         this.ctx = ctx;
     }
 
+    getCanvasContext() {
+        return this.ctx;
+    }
+
     drawCircle(position: Vec2, radius: number, lineWidth: number, strokeStyle: string) {
         const c = this.ctx;
         const p = this.objectToCanvasCoords(position);
@@ -81,24 +85,6 @@ export class CanvasRenderer {
         }
     }
 
-    drawShapes() {
-        const c = this.ctx;
-        c.fillStyle = "red";
-        c.beginPath();
-        const s = this.objectToCanvasCoords(new Vec2(100, 100));
-        c.arc(s.x, s.y, 50 * this.state.zoom, 0, Math.PI * 2);
-        c.fill();
-
-        this.drawCircle(new Vec2(150, 150), 5, 1, "blue");
-
-        
-        for (var x = 0; x < 100; x += 10) {
-            for (var y = 0; y < 100; y += 10) {
-                this.drawCircle(new Vec2(x, y), 3, 1, "green");
-            }
-        }
-    }
-
     objectToCanvasCoords(v: Vec2): Vec2 {
         return v.mul(this.state.zoom).add(this.state.pan);
     }
@@ -120,16 +106,18 @@ export class CanvasRenderer {
         const dotSize = 5;
         this.ctx.strokeStyle = "black";
         this.ctx.lineWidth = 1;
+        this.ctx.fillStyle = "white";
         this.ctx.beginPath();
         this.ctx.rect(mousePos.x - dotSize / 2, mousePos.y - dotSize / 2, dotSize, dotSize);
         this.ctx.stroke();
+        this.ctx.fill();
     }
 
     renderCanvas(state: SketchEditorState) {
         this.state = state;
         this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
         this.renderGrid();
-        this.drawShapes();
+        this.state.document.renderShapes(this);
         this.renderCursorPreview();
     };
 }

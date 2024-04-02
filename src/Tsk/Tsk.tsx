@@ -1,4 +1,4 @@
-import Toolbar from "./components/Toolbar";
+import Toolbar2 from "./components/Toolbar2";
 import SketchEditor from "./components/SketchEditor/SketchEditor";
 
 function Tsk() {
@@ -11,8 +11,8 @@ function Tsk() {
                 flexDirection: "column",
             }}
         >
-            <Toolbar height={10} />
-            <SketchEditor zoomSensitivity={0.001} invertMouse={false}/>
+            <Toolbar2 height={10} />
+            <SketchEditor zoomSensitivity={0.001} invertMouse={false} snapToGridCM={1}/>
         </div>
     );
 }

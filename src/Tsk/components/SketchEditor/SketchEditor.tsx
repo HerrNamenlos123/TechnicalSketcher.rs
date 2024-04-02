@@ -6,6 +6,9 @@ import React, {
 } from "react";
 import Vec2 from "../../types/Vector";
 import { CanvasRenderer } from "./CanvasRenderer";
+import Toolbar from "./Toolbar";
+import "./SketchEditor.css"
+import TskDocument from "../../types/TskDocument";
 
 interface SketchEditorProps {
     zoomSensitivity: number;
@@ -20,6 +23,9 @@ interface SketchEditorState {
     eventCache: React.PointerEvent<HTMLCanvasElement>[];
     cursorPreviewPos: Vec2;
     cursorPreviewEnabled: boolean;
+    selectedTool: string;
+
+    document: TskDocument;
 }
 
 class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
@@ -42,6 +48,8 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
             eventCache: [],
             cursorPreviewPos: new Vec2(),
             cursorPreviewEnabled: true,
+            selectedTool: "",
+            document: new TskDocument(),
         };
         this.canvasRef = React.createRef<HTMLCanvasElement>();
         this.lastAveragePosition = undefined;
@@ -200,6 +208,10 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
 
         }
     }
+
+    onSelectTool(tool: string) {
+        this.setState({ selectedTool: tool });
+    }
       
     componentDidMount() {
         const canvas = this.canvasRef.current;
@@ -223,21 +235,24 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
 
     render() {
         return (
-            <canvas
-                ref={this.canvasRef}
-                width={window.innerWidth}
-                height={window.innerHeight}
-                style={{ background: "white" }}
-                onWheel={this.handleWheel}
-                onPointerDown={this.pointerDownHandler}
-                onPointerMove={this.pointerMoveHandler}
-                // Use same handler for pointer{up,cancel,out,leave} events since
-                // the semantics for these events - in this app - are the same.
-                onPointerUp={this.pointerUpHandler}
-                onPointerCancel={this.pointerUpHandler}
-                onPointerOut={this.pointerUpHandler}
-                onPointerLeave={this.pointerUpHandler}
-            />
+            <div className="sketcheditor-container">
+                <Toolbar onSelectTool={ (tool) => this.onSelectTool(tool) }/>
+                <canvas
+                    ref={this.canvasRef}
+                    width={window.innerWidth}
+                    height={window.innerHeight}
+                    style={{ background: "white" }}
+                    onWheel={this.handleWheel}
+                    onPointerDown={this.pointerDownHandler}
+                    onPointerMove={this.pointerMoveHandler}
+                    // Use same handler for pointer{up,cancel,out,leave} events since
+                    // the semantics for these events - in this app - are the same.
+                    onPointerUp={this.pointerUpHandler}
+                    onPointerCancel={this.pointerUpHandler}
+                    onPointerOut={this.pointerUpHandler}
+                    onPointerLeave={this.pointerUpHandler}
+                />
+            </div>
         );
     }
 }
