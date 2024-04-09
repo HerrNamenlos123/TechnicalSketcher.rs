@@ -2,9 +2,12 @@ import { CanvasRenderer } from "../components/SketchEditor/CanvasRenderer";
 import BoundingBox from "./BoundingBox";
 import Vec2 from "./Vector";
 
+export type ShapeClickType = "left" | "wheel" | "right";
+
 export abstract class Shape {
     abstract getBoundingBox(): BoundingBox;
     abstract renderOnCanvas(context: CanvasRenderer): void;
+    abstract handleClick(position: Vec2, shapeClickType: ShapeClickType): void;
 }
 
 export class LineShape extends Shape {
@@ -14,6 +17,9 @@ export class LineShape extends Shape {
     lineColor: string;
     lineCap: CanvasLineCap;
 
+    // These options are only relevant for preview
+    isFirstPointPlaced: boolean;
+
     constructor(start: Vec2, end: Vec2, lineWidth: number, lineColor: string, lineCap: CanvasLineCap) {
         super();
         this.start = start;
@@ -21,6 +27,9 @@ export class LineShape extends Shape {
         this.lineWidth = lineWidth;
         this.lineColor = lineColor;
         this.lineCap = lineCap;
+
+        // These options are only relevant for preview
+        this.isFirstPointPlaced = false;
     }
 
     getBoundingBox(): BoundingBox {
@@ -43,6 +52,17 @@ export class LineShape extends Shape {
         ctx.moveTo(start.x, start.y);
         ctx.lineTo(end.x, end.y);
         ctx.stroke();
+    }
+
+    handleClick(position: Vec2, shapeClickType: ShapeClickType): void {
+        if (!this.isFirstPointPlaced) {
+            if (shapeClickType === "left") {
+                
+            }
+        }
+        else {
+
+        }
     }
 }
 

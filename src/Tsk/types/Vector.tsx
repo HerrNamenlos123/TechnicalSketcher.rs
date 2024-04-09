@@ -46,5 +46,9 @@ class Vec2 {
     round(): Vec2 {
         return new Vec2(Math.round(this.x), Math.round(this.y));
     }
+
+    equal(other: Vec2): boolean {
+        return this.x === other.x && this.y === other.y;
+    }
 }
 export default Vec2;

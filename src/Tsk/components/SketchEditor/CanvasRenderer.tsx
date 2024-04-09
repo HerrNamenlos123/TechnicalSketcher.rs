@@ -101,23 +101,10 @@ export class CanvasRenderer {
         return d / this.state.zoom;
     }
 
-    renderCursorPreview() {
-        const mousePos = this.objectToCanvasCoords(this.state.cursorPreviewPos);
-        const dotSize = 5;
-        this.ctx.strokeStyle = "black";
-        this.ctx.lineWidth = 1;
-        this.ctx.fillStyle = "white";
-        this.ctx.beginPath();
-        this.ctx.rect(mousePos.x - dotSize / 2, mousePos.y - dotSize / 2, dotSize, dotSize);
-        this.ctx.stroke();
-        this.ctx.fill();
-    }
-
     renderCanvas(state: SketchEditorState) {
         this.state = state;
         this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
         this.renderGrid();
-        this.state.document.renderShapes(this);
-        this.renderCursorPreview();
+        this.state.__document.render(this);
     };
 }
