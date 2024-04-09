@@ -121,7 +121,18 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
     }
 
     updatePointers() {
-        if (this.state.eventCache.length !== 2) {
+        const numberOfFingers = this.state.eventCache.length;
+        if (numberOfFingers === 1) {
+            const averagePosition = new Vec2(this.state.eventCache[0].clientX, this.state.eventCache[0].clientY);
+            if (!this.lastAveragePosition) {
+                this.lastAveragePosition = averagePosition;
+                return;
+            }
+            this.handlePanDelta(averagePosition.sub(this.lastAveragePosition));
+            this.lastAveragePosition = averagePosition;
+            return;
+        }
+        else if (numberOfFingers !== 2) {
             this.initialZoomFingerDistance = undefined;
             this.lastAveragePosition = undefined;
             this.initialZoomFactor = undefined;
@@ -153,6 +164,9 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
             let cache = this.state.eventCache;
             cache.push(e);
             this.setState({ eventCache: cache });
+            this.initialZoomFingerDistance = undefined;
+            this.lastAveragePosition = undefined;
+            this.initialZoomFactor = undefined;
             this.updatePointers();
         }
         else if (e.pointerType == "mouse") {
@@ -199,6 +213,9 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
             if (index !== -1) {
                 this.state.eventCache.splice(index, 1);
             }
+            this.initialZoomFingerDistance = undefined;
+            this.lastAveragePosition = undefined;
+            this.initialZoomFactor = undefined;
             this.updatePointers();
         }
         else if (e.pointerType == "mouse") {
