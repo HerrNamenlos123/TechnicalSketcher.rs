@@ -140,7 +140,6 @@ export class PathShape extends Shape {
         if (this.points.length < 2) {
             return;
         }
-        console.log("continue");
         // https://www.youtube.com/watch?v=DLsqkWV6Cag
         // Catmull-Rom Splines algorithm
         const points = this.points.map((p) => renderer.objectToCanvasCoords(p));
@@ -167,7 +166,6 @@ export class PathShape extends Shape {
             ctx.lineTo(points[1].x, points[1].y);
         }
         ctx.stroke();
-        console.log("done");
     }
 
     updatePathEnd(position: Vec2): void {
