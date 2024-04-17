@@ -1,15 +1,10 @@
-import React, {
-    Component,
-    useEffect,
-    useRef,
-    useState,
-} from "react";
+import React, { Component, useEffect, useRef, useState } from "react";
 import Vec2 from "../../types/Vector";
 import { CanvasRenderer } from "./CanvasRenderer";
 import Toolbar from "./Toolbar";
-import "./SketchEditor.css"
+import "./SketchEditor.css";
 import TskDocument from "../../types/TskDocument";
-import { Shape } from "../../types/Shapes";
+import { SelectTool } from "../../types/Tools";
 
 interface SketchEditorProps {
     zoomSensitivity: number;
@@ -24,7 +19,6 @@ interface SketchEditorState {
     eventCache: React.PointerEvent<HTMLCanvasElement>[];
     cursorPreviewPos: Vec2;
     cursorPreviewEnabled: boolean;
-    selectedTool: string;
 
     __document: TskDocument;
 }
@@ -45,11 +39,10 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
         this.state = {
             canvasContext: null,
             pan: new Vec2(),
-            zoom: 20,
+            zoom: 100,
             eventCache: [],
             cursorPreviewPos: new Vec2(),
             cursorPreviewEnabled: true,
-            selectedTool: "",
 
             __document: new TskDocument(),
         };
@@ -81,7 +74,7 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
         if (!rect) {
             return new Vec2();
         }
-        
+
         return globalMouse.sub(new Vec2(rect.left, rect.top));
     }
 
@@ -97,8 +90,10 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
         if (this.canvasRenderer) {
             const mouse = this.globalMouseToCanvasPos(mousePosition);
             const document = this.getDocument();
-            document.setRawCursorPos(this.canvasRenderer.canvasToObjectCoords(mouse));
-            document.updateCursor();
+            document.setRawCursorPos(
+                this.canvasRenderer.canvasToObjectCoords(mouse)
+            );
+            document.onCursorMove();
             this.updateDocument(document);
         }
     }
@@ -109,7 +104,7 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
         if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
             document.setCursorSmooth(true);
         }
-        document.updateCursor();
+        document.onCursorMove();
         this.updateDocument(document);
     }
 
@@ -118,24 +113,27 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
         if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
             document.setCursorSmooth(false);
         }
-        document.updateCursor();
+        document.onCursorMove();
         this.updateDocument(document);
     }
 
     handlePanDelta(delta: Vec2) {
         this.prevPan = this.prevPan.add(delta);
         this.setState({ pan: this.prevPan });
-    };
+    }
 
     handleZoom(newGlobalFactor: number, averagePosition: Vec2) {
-        const averageInCanvasCoords = this.globalMouseToCanvasPos(averagePosition);
+        const averageInCanvasCoords =
+            this.globalMouseToCanvasPos(averagePosition);
         const averageToPrevPan = this.prevPan.sub(averageInCanvasCoords);
-        const scaledAverageToPan = averageToPrevPan.mul(newGlobalFactor / this.prevZoomFactor)
+        const scaledAverageToPan = averageToPrevPan.mul(
+            newGlobalFactor / this.prevZoomFactor
+        );
         const newPan = averageInCanvasCoords.add(scaledAverageToPan);
-        
-        this.setState({ 
-            zoom: newGlobalFactor, 
-            pan: newPan 
+
+        this.setState({
+            zoom: newGlobalFactor,
+            pan: newPan,
         });
         this.prevPan = newPan;
         this.prevZoomFactor = newGlobalFactor;
@@ -144,17 +142,18 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
     handleWheel(e: React.WheelEvent<HTMLCanvasElement>) {
         if (e.ctrlKey) {
             const delta = e.deltaX + e.deltaY;
-            const newGlobalZoom = this.state.zoom + this.state.zoom * (-delta * this.props.zoomSensitivity);
+            const newGlobalZoom =
+                this.state.zoom +
+                this.state.zoom * (-delta * this.props.zoomSensitivity);
             this.handleZoom(newGlobalZoom, new Vec2(e.clientX, e.clientY));
-        }
-        else {
+        } else {
             const delta = new Vec2(-e.deltaX, -e.deltaY);
             if (this.props.invertMouse) {
                 delta.mul(-1);
             }
             this.handlePanDelta(delta);
         }
-    };
+    }
 
     moveCanvasCenterToPoint(point: Vec2) {
         this.prevPan = point;
@@ -164,7 +163,10 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
     updatePointers() {
         const numberOfFingers = this.state.eventCache.length;
         if (numberOfFingers === 1) {
-            const averagePosition = new Vec2(this.state.eventCache[0].clientX, this.state.eventCache[0].clientY);
+            const averagePosition = new Vec2(
+                this.state.eventCache[0].clientX,
+                this.state.eventCache[0].clientY
+            );
             if (!this.lastAveragePosition) {
                 this.lastAveragePosition = averagePosition;
                 return;
@@ -172,20 +174,30 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
             this.handlePanDelta(averagePosition.sub(this.lastAveragePosition));
             this.lastAveragePosition = averagePosition;
             return;
-        }
-        else if (numberOfFingers !== 2) {
+        } else if (numberOfFingers !== 2) {
             this.initialZoomFingerDistance = undefined;
             this.lastAveragePosition = undefined;
             this.initialZoomFactor = undefined;
             return;
         }
 
-        const finger1 = new Vec2(this.state.eventCache[0].clientX, this.state.eventCache[0].clientY);
-        const finger2 = new Vec2(this.state.eventCache[1].clientX, this.state.eventCache[1].clientY);
+        const finger1 = new Vec2(
+            this.state.eventCache[0].clientX,
+            this.state.eventCache[0].clientY
+        );
+        const finger2 = new Vec2(
+            this.state.eventCache[1].clientX,
+            this.state.eventCache[1].clientY
+        );
         const averagePosition = finger1.add(finger2).div(2);
         const fingerDistance = finger2.sub(finger1).mag();
 
-        if (!this.initialZoomFingerDistance || !this.lastAveragePosition || !this.initialZoomFactor || !this.initialZoomPosition) {
+        if (
+            !this.initialZoomFingerDistance ||
+            !this.lastAveragePosition ||
+            !this.initialZoomFactor ||
+            !this.initialZoomPosition
+        ) {
             this.initialZoomFingerDistance = fingerDistance;
             this.lastAveragePosition = averagePosition;
             this.initialZoomFactor = this.state.zoom;
@@ -194,8 +206,12 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
         }
 
         this.handlePanDelta(averagePosition.sub(this.lastAveragePosition));
-        const fingerDistanceScaleFactor = fingerDistance / this.initialZoomFingerDistance;
-        this.handleZoom(this.initialZoomFactor * fingerDistanceScaleFactor, averagePosition);
+        const fingerDistanceScaleFactor =
+            fingerDistance / this.initialZoomFingerDistance;
+        this.handleZoom(
+            this.initialZoomFactor * fingerDistanceScaleFactor,
+            averagePosition
+        );
 
         this.lastAveragePosition = averagePosition;
     }
@@ -209,8 +225,7 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
             this.lastAveragePosition = undefined;
             this.initialZoomFactor = undefined;
             this.updatePointers();
-        }
-        else if (e.pointerType == "mouse") {
+        } else if (e.pointerType == "mouse") {
             const mousePos = new Vec2(e.clientX, e.clientY);
             if (e.buttons === 4 || (e.shiftKey && e.buttons == 1)) {
                 this.prevMousePosition = mousePos;
@@ -219,50 +234,61 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
             document.setCursorSmooth(e.shiftKey);
             switch (e.button) {
                 case 0:
-                    document.handleClick("left");
+                    document.onCursorDown("left");
                     break;
                 case 1:
-                    document.handleClick("wheel");
+                    document.onCursorDown("wheel");
                     break;
                 case 2:
-                    document.handleClick("right");
+                    document.onCursorDown("right");
                     break;
             }
             this.updateDocument(document);
-        }
-        else if (e.pointerType == "pen") {
-
+        } else if (e.pointerType == "pen") {
+            const document = this.getDocument();
+            document.setCursorSmooth(e.shiftKey);
+            document.onCursorDown("left");
+            this.updateDocument(document);
         }
     }
 
     pointerMoveHandler(e: React.PointerEvent<HTMLCanvasElement>) {
         if (e.pointerType == "touch") {
             const index = this.state.eventCache.findIndex(
-            (cachedEv) => cachedEv.pointerId === e.pointerId,
+                (cachedEv) => cachedEv.pointerId === e.pointerId
             );
             this.state.eventCache[index] = e;
             this.updatePointers();
-        }
-        else if (e.pointerType == "mouse") {
-            if (e.buttons === 4 || (e.shiftKey && e.buttons == 1)) {
-                const mouse = new Vec2(e.clientX, e.clientY);
+        } else if (e.pointerType == "mouse") {
+            const mouse = new Vec2(e.clientX, e.clientY);
+            if (
+                e.buttons === 4 ||
+                (e.shiftKey &&
+                    e.buttons == 1 &&
+                    this.getDocument().selectedTool instanceof SelectTool)
+            ) {
                 this.handlePanDelta(mouse.sub(this.prevMousePosition));
-                this.prevMousePosition = mouse;
             }
-            this.updateDocumentCursorPosition(new Vec2(e.clientX, e.clientY));
-            const document = this.getDocument()
+            this.prevMousePosition = mouse;
+            const document = this.getDocument();
             document.setCursorSmooth(e.shiftKey);
             this.updateDocument(document);
-        }
-        else if (e.pointerType == "pen") {
-
+            this.updateDocumentCursorPosition(new Vec2(e.clientX, e.clientY));
+        } else if (e.pointerType == "pen") {
+            const mouse = new Vec2(e.clientX, e.clientY);
+            this.prevMousePosition = mouse;
+            const document = this.getDocument();
+            // document.setCursorSmooth(e.shiftKey);
+            document.setCursorSmooth(true);
+            this.updateDocument(document);
+            this.updateDocumentCursorPosition(new Vec2(e.clientX, e.clientY));
         }
     }
-    
+
     pointerUpHandler(e: React.PointerEvent<HTMLCanvasElement>) {
         if (e.pointerType == "touch") {
             const index = this.state.eventCache.findIndex(
-            (cachedEv) => cachedEv.pointerId === e.pointerId,
+                (cachedEv) => cachedEv.pointerId === e.pointerId
             );
             if (index !== -1) {
                 this.state.eventCache.splice(index, 1);
@@ -271,33 +297,53 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
             this.lastAveragePosition = undefined;
             this.initialZoomFactor = undefined;
             this.updatePointers();
-        }
-        else if (e.pointerType == "mouse") {
-
-        }
-        else if (e.pointerType == "pen") {
-
+        } else if (e.pointerType == "mouse") {
+            const document = this.getDocument();
+            document.setCursorSmooth(e.shiftKey);
+            switch (e.button) {
+                case 0:
+                    document.onCursorUp("left");
+                    break;
+                case 1:
+                    document.onCursorUp("wheel");
+                    break;
+                case 2:
+                    document.onCursorUp("right");
+                    break;
+            }
+            this.updateDocument(document);
+        } else if (e.pointerType == "pen") {
+            const document = this.getDocument();
+            document.setCursorSmooth(e.shiftKey);
+            document.onCursorUp("left");
+            this.updateDocument(document);
         }
     }
 
     onSelectTool(tool: string) {
-        this.setState({ selectedTool: tool });
+        const document = this.getDocument();
+        document.selectTool(tool);
+        this.updateDocument(document);
     }
-      
+
     componentDidMount() {
         const canvas = this.canvasRef.current;
         if (canvas) {
             const context = canvas.getContext("2d");
             if (context) {
                 this.setState({ canvasContext: context });
-                this.moveCanvasCenterToPoint(new Vec2(context.canvas.width / 2, context.canvas.height / 2));
+                this.moveCanvasCenterToPoint(
+                    new Vec2(
+                        context.canvas.width / 2,
+                        context.canvas.height / 2
+                    )
+                );
                 this.canvasRenderer = new CanvasRenderer(this.state, context);
             }
         }
     }
-      
-    componentWillUnmount() {
-    }
+
+    componentWillUnmount() {}
 
     componentDidUpdate() {
         if (this.state.canvasContext) {
@@ -310,10 +356,10 @@ class SketchEditor extends Component<SketchEditorProps, SketchEditorState> {
     render() {
         return (
             <div className="sketcheditor-container">
-                <Toolbar onSelectTool={ (tool) => this.onSelectTool(tool) }/>
+                <Toolbar onSelectTool={(tool) => this.onSelectTool(tool)} />
                 <canvas
                     className="sketcheditor-canvas"
-                    tabIndex={0}  /* Make it selectable (keyboard input) */
+                    tabIndex={0} /* Make it selectable (keyboard input) */
                     ref={this.canvasRef}
                     width={window.innerWidth}
                     height={window.innerHeight}

@@ -50,5 +50,9 @@ class Vec2 {
     equal(other: Vec2): boolean {
         return this.x === other.x && this.y === other.y;
     }
+
+    dot(other: Vec2): number {
+        return this.x * other.x + this.y * other.y;
+    }
 }
 export default Vec2;

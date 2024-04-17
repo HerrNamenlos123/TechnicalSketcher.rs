@@ -7,29 +7,49 @@ export type ShapeClickType = "left" | "wheel" | "right";
 export abstract class Shape {
     abstract getBoundingBox(): BoundingBox;
     abstract renderOnCanvas(context: CanvasRenderer): void;
-    abstract handleClick(position: Vec2, shapeClickType: ShapeClickType): void;
+}
+
+interface LineShapeProperties {
+    lineWidth: number;
+    lineColor: string;
+    lineCap: CanvasLineCap;
+}
+
+class Line {
+    start: Vec2;
+    end: Vec2;
+
+    constructor(start: Vec2, end: Vec2) {
+        this.start = start;
+        this.end = end;
+    }
+
+    distanceToPoint(point: Vec2): number {
+        // https://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
+        const v = this.start;
+        const w = this.end;
+        const l2 = Math.pow(w.sub(v).mag(), 2); // i.e. |w-v|^2 - avoid a sqrt
+        if (l2 === 0.0) return point.sub(v).mag(); // v == w case
+        // Consider the line extending the segment, parameterized as v + t (w - v).
+        // We find projection of point p onto the line.
+        // It falls where t = [(p-v) . (w-v)] / |w-v|^2
+        // We clamp t from [0,1] to handle points outside the segment vw.
+        const t = Math.max(0, Math.min(1, point.sub(v).dot(w.sub(v)) / l2));
+        const projection = v.add(w.sub(v).mul(t)); // Projection falls on the segment
+        return point.sub(projection).mag();
+    }
 }
 
 export class LineShape extends Shape {
     start: Vec2;
     end: Vec2;
-    lineWidth: number;
-    lineColor: string;
-    lineCap: CanvasLineCap;
+    properties: LineShapeProperties;
 
-    // These options are only relevant for preview
-    isFirstPointPlaced: boolean;
-
-    constructor(start: Vec2, end: Vec2, lineWidth: number, lineColor: string, lineCap: CanvasLineCap) {
+    constructor(start: Vec2, end: Vec2, properties: LineShapeProperties) {
         super();
         this.start = start;
         this.end = end;
-        this.lineWidth = lineWidth;
-        this.lineColor = lineColor;
-        this.lineCap = lineCap;
-
-        // These options are only relevant for preview
-        this.isFirstPointPlaced = false;
+        this.properties = properties;
     }
 
     getBoundingBox(): BoundingBox {
@@ -37,8 +57,11 @@ export class LineShape extends Shape {
         const right = Math.max(this.start.x, this.end.x);
         const top = Math.min(this.start.y, this.end.y);
         const bottom = Math.max(this.start.y, this.end.y);
-        const radius = this.lineWidth / 2;
-        return new BoundingBox(new Vec2(left - radius, top - radius), new Vec2(right + radius, bottom + radius));
+        const radius = this.properties.lineWidth / 2;
+        return new BoundingBox(
+            new Vec2(left - radius, top - radius),
+            new Vec2(right + radius, bottom + radius)
+        );
     }
 
     renderOnCanvas(renderer: CanvasRenderer): void {
@@ -46,23 +69,147 @@ export class LineShape extends Shape {
         const start = renderer.objectToCanvasCoords(this.start);
         const end = renderer.objectToCanvasCoords(this.end);
         ctx.beginPath();
-        ctx.strokeStyle = this.lineColor;
-        ctx.lineCap = this.lineCap;
-        ctx.lineWidth = renderer.objectToCanvasDistance(this.lineWidth);
+        ctx.strokeStyle = this.properties.lineColor;
+        ctx.lineCap = this.properties.lineCap;
+        ctx.lineWidth = renderer.objectToCanvasDistance(
+            this.properties.lineWidth
+        );
         ctx.moveTo(start.x, start.y);
         ctx.lineTo(end.x, end.y);
         ctx.stroke();
     }
+}
 
-    handleClick(position: Vec2, shapeClickType: ShapeClickType): void {
-        if (!this.isFirstPointPlaced) {
-            if (shapeClickType === "left") {
-                
+interface CircleShapeProperties {
+    lineWidth: number;
+    lineColor: string;
+}
+
+export class CircleShape extends Shape {
+    center: Vec2;
+    radius: number;
+    properties: CircleShapeProperties;
+
+    constructor(
+        center: Vec2,
+        radius: number,
+        properties: CircleShapeProperties
+    ) {
+        super();
+        this.center = center;
+        this.radius = radius;
+        this.properties = properties;
+    }
+
+    getBoundingBox(): BoundingBox {
+        return new BoundingBox(new Vec2(), new Vec2());
+    }
+
+    renderOnCanvas(renderer: CanvasRenderer): void {
+        const ctx = renderer.getCanvasContext();
+        const center = renderer.objectToCanvasCoords(this.center);
+        const radius = renderer.objectToCanvasDistance(this.radius);
+        ctx.beginPath();
+        ctx.strokeStyle = this.properties.lineColor;
+        ctx.lineWidth = renderer.objectToCanvasDistance(
+            this.properties.lineWidth
+        );
+        ctx.ellipse(center.x, center.y, radius, radius, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+}
+
+export class PathShape extends Shape {
+    points: Vec2[];
+    tempStartPos: Vec2 | null;
+
+    constructor() {
+        super();
+        this.points = [];
+        this.tempStartPos = null;
+    }
+
+    getBoundingBox(): BoundingBox {
+        return new BoundingBox(new Vec2(), new Vec2()); // TODO !!!
+    }
+
+    renderOnCanvas(renderer: CanvasRenderer): void {
+        if (this.points.length < 2) {
+            return;
+        }
+        const line = new LineShape(new Vec2(), new Vec2(), {
+            lineWidth: 0.05,
+            lineColor: "black",
+            lineCap: "round",
+        });
+        for (let i = 0; i < this.points.length - 1; i++) {
+            line.start = this.points[i];
+            line.end = this.points[i + 1];
+            line.renderOnCanvas(renderer);
+        }
+    }
+
+    updatePathEnd(position: Vec2): void {
+        this.points.push(position);
+    }
+
+    isValid(): boolean {
+        return this.points.length >= 2;
+    }
+
+    simplify(tolerance: number): void {
+        // https://www.youtube.com/watch?v=SbVXh5VtxKw
+        // Ramer-Douglas-Peucker Algorithm
+
+        const ramerDouglasPeucker = (
+            points: Vec2[],
+            tolerance: number
+        ): Vec2[] => {
+            if (points.length <= 2) {
+                return points;
             }
-        }
-        else {
 
-        }
+            let newPoints: Vec2[] = []; // make line from start to end
+            const line = new Line(points[0], points[points.length - 1]);
+            // find the largest distance from intermediate poitns to this line
+            let maxDistance = 0;
+            let maxDistanceIndex = 0;
+            for (let i = 1; i <= points.length - 2; i++) {
+                let distance = line.distanceToPoint(points[i]);
+                if (distance > maxDistance) {
+                    maxDistance = distance;
+                    maxDistanceIndex = i;
+                }
+            }
+            // check if the max distance is greater than our tollerance allows
+            if (maxDistance >= tolerance) {
+                line.distanceToPoint(points[maxDistanceIndex]);
+                // include this point in the output
+                newPoints = newPoints.concat(
+                    ramerDouglasPeucker(
+                        points.slice(0, maxDistanceIndex + 1),
+                        tolerance
+                    )
+                );
+                // returnPoints.push( points[maxDistanceIndex] );
+                newPoints = newPoints.concat(
+                    ramerDouglasPeucker(
+                        points.slice(maxDistanceIndex, points.length),
+                        tolerance
+                    )
+                );
+            } else {
+                // ditching this point
+                line.distanceToPoint(points[maxDistanceIndex]);
+                newPoints = [points[0]];
+            }
+            return newPoints;
+        };
+
+        const newPoints = ramerDouglasPeucker(this.points, tolerance);
+        // always have to push the very last point on so it doesn't get left off
+        newPoints.push(this.points[this.points.length - 1]);
+        this.points = newPoints;
     }
 }
 
@@ -75,7 +222,15 @@ export class RectangleShape extends Shape {
     fillColor: string;
     cornerRadius: number;
 
-    constructor(leftUpper: Vec2, size: Vec2, lineWidth: number, lineColor: string, lineCap: CanvasLineCap, fillColor: string, cornerRadius: number) {
+    constructor(
+        leftUpper: Vec2,
+        size: Vec2,
+        lineWidth: number,
+        lineColor: string,
+        lineCap: CanvasLineCap,
+        fillColor: string,
+        cornerRadius: number
+    ) {
         super();
         this.leftUpper = leftUpper;
         this.size = size;
@@ -88,17 +243,29 @@ export class RectangleShape extends Shape {
 
     getBoundingBox(): BoundingBox {
         const left = Math.min(this.leftUpper.x, this.leftUpper.x + this.size.x);
-        const right = Math.max(this.leftUpper.x, this.leftUpper.x + this.size.x);
+        const right = Math.max(
+            this.leftUpper.x,
+            this.leftUpper.x + this.size.x
+        );
         const top = Math.min(this.leftUpper.y, this.leftUpper.y + this.size.y);
-        const bottom = Math.max(this.leftUpper.y, this.leftUpper.y + this.size.y);
+        const bottom = Math.max(
+            this.leftUpper.y,
+            this.leftUpper.y + this.size.y
+        );
         const radius = this.lineWidth / 2;
-        return new BoundingBox(new Vec2(left - radius, top - radius), new Vec2(right + radius, bottom + radius));
+        return new BoundingBox(
+            new Vec2(left - radius, top - radius),
+            new Vec2(right + radius, bottom + radius)
+        );
     }
 
     renderOnCanvas(renderer: CanvasRenderer): void {
         const ctx = renderer.getCanvasContext();
         const start = renderer.objectToCanvasCoords(this.leftUpper);
-        const size = new Vec2(renderer.objectToCanvasDistance(this.size.x), renderer.objectToCanvasDistance(this.size.y));
+        const size = new Vec2(
+            renderer.objectToCanvasDistance(this.size.x),
+            renderer.objectToCanvasDistance(this.size.y)
+        );
         const radius = renderer.objectToCanvasDistance(this.cornerRadius);
         ctx.beginPath();
         ctx.fillStyle = this.fillColor;

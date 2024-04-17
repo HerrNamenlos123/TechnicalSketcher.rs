@@ -1,41 +1,38 @@
 import { CanvasRenderer } from "../components/SketchEditor/CanvasRenderer";
-import { LineShape, Shape } from "./Shapes";
+import { LineShape, PathShape, Shape } from "./Shapes";
 import TskDocument from "./TskDocument";
 import Vec2 from "./Vector";
 
-export type ShapeClickType = "left" | "wheel" | "right";
+export type MouseButton = "left" | "wheel" | "right";
 
 export abstract class Tool {
     documentRef: TskDocument;
     constructor(documentRef: TskDocument) {
         this.documentRef = documentRef;
     }
-    abstract handleClick(position: Vec2, shapeClickType: ShapeClickType): void;
-    abstract updateCursor(position: Vec2): void;
+    abstract deselectTool(): void;
+    abstract onCursorDown(position: Vec2, button: MouseButton): void;
+    abstract onCursorUp(position: Vec2, button: MouseButton): void;
+    abstract onCursorMove(position: Vec2): void;
     abstract handleKey(code: string): void;
     abstract renderOnCanvas(context: CanvasRenderer): void;
 }
 
 export class SelectTool extends Tool {
-
     constructor(documentRef: TskDocument) {
         super(documentRef);
     }
 
-    handleClick(position: Vec2, shapeClickType: ShapeClickType): void {
-    
-    }
+    deselectTool(): void {}
 
-    updateCursor(position: Vec2): void {
-    
-    }
+    onCursorDown(position: Vec2, button: MouseButton): void {}
+    onCursorUp(position: Vec2, button: MouseButton): void {}
 
-    handleKey(code: string): void {
-        this.selectedTool.handleKey(code);
-    }
+    onCursorMove(position: Vec2): void {}
 
-    renderOnCanvas(renderer: CanvasRenderer): void {
-    }
+    handleKey(code: string): void {}
+
+    renderOnCanvas(renderer: CanvasRenderer): void {}
 }
 
 export class LineTool extends Tool {
@@ -46,15 +43,22 @@ export class LineTool extends Tool {
         this.preview = null;
     }
 
-    handleClick(position: Vec2, shapeClickType: ShapeClickType): void {
-        if (shapeClickType === "left") {
+    deselectTool(): void {}
+
+    onCursorDown(position: Vec2, button: MouseButton): void {
+        if (button === "left") {
             if (!this.preview) {
                 const lineWidth = 0.1;
                 const lineColor = "black";
                 const lineCap = "round";
-                this.preview = new LineShape(position, position, lineWidth, lineColor, lineCap);
-            }
-            else {
+                this.preview = new LineShape(
+                    position,
+                    position,
+                    lineWidth,
+                    lineColor,
+                    lineCap
+                );
+            } else {
                 this.preview.end = position;
                 console.log(this.preview.end, this.preview.start);
                 if (!this.preview.start.equal(this.preview.end)) {
@@ -62,13 +66,14 @@ export class LineTool extends Tool {
                 }
                 this.preview = null;
             }
-        }
-        else if (shapeClickType === "right") {
+        } else if (button === "right") {
             this.preview = null;
         }
     }
 
-    updateCursor(position: Vec2): void {
+    onCursorUp(position: Vec2, button: MouseButton): void {}
+
+    onCursorMove(position: Vec2): void {
         if (this.preview) {
             this.preview.end = position;
         }
@@ -84,5 +89,53 @@ export class LineTool extends Tool {
         if (this.preview) {
             this.preview.renderOnCanvas(renderer);
         }
+    }
+}
+
+export class PenTool extends Tool {
+    path: PathShape;
+    mouseDown: boolean;
+    tolerance = 0.01;
+
+    constructor(documentRef: TskDocument) {
+        super(documentRef);
+        this.path = new PathShape();
+        this.mouseDown = false;
+    }
+
+    deselectTool(): void {}
+
+    onCursorDown(position: Vec2, button: MouseButton): void {
+        if (button === "left") {
+            this.mouseDown = true;
+        } else if (button === "right") {
+        }
+    }
+
+    onCursorUp(position: Vec2, button: MouseButton): void {
+        if (button === "left") {
+            this.mouseDown = false;
+            if (this.path.isValid()) {
+                this.path.simplify(this.tolerance);
+                this.documentRef.addShape(this.path);
+            }
+            this.path = new PathShape();
+        } else if (button === "right") {
+        }
+    }
+
+    onCursorMove(position: Vec2): void {
+        if (this.mouseDown) {
+            this.path.updatePathEnd(position);
+        }
+    }
+
+    handleKey(code: string): void {
+        if (code === "Escape") {
+        }
+    }
+
+    renderOnCanvas(renderer: CanvasRenderer): void {
+        this.path.renderOnCanvas(renderer);
     }
 }
