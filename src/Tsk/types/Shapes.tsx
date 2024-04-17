@@ -121,12 +121,14 @@ export class CircleShape extends Shape {
 
 export class PathShape extends Shape {
     points: Vec2[];
-    tempStartPos: Vec2 | null;
+    lineColor: string;
+    lineWidth: number;
 
     constructor() {
         super();
         this.points = [];
-        this.tempStartPos = null;
+        this.lineColor = "black";
+        this.lineWidth = 0.05;
     }
 
     getBoundingBox(): BoundingBox {
@@ -134,19 +136,38 @@ export class PathShape extends Shape {
     }
 
     renderOnCanvas(renderer: CanvasRenderer): void {
+        console.log(this.points.length);
         if (this.points.length < 2) {
             return;
         }
-        const line = new LineShape(new Vec2(), new Vec2(), {
-            lineWidth: 0.05,
-            lineColor: "black",
-            lineCap: "round",
-        });
-        for (let i = 0; i < this.points.length - 1; i++) {
-            line.start = this.points[i];
-            line.end = this.points[i + 1];
-            line.renderOnCanvas(renderer);
+        console.log("continue");
+        // https://www.youtube.com/watch?v=DLsqkWV6Cag
+        // Catmull-Rom Splines algorithm
+        const points = this.points.map((p) => renderer.objectToCanvasCoords(p));
+        const ctx = renderer.ctx;
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = renderer.objectToCanvasDistance(this.lineWidth);
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        console.log(this.points.length);
+        if (this.points.length >= 3) {
+            for (var i = 1; i < points.length - 2; i++) {
+                var xc = (points[i].x + points[i + 1].x) / 2;
+                var yc = (points[i].y + points[i + 1].y) / 2;
+                ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+            }
+            console.log(i);
+            ctx.quadraticCurveTo(
+                points[i].x,
+                points[i].y,
+                points[i + 1].x,
+                points[i + 1].y
+            );
+        } else {
+            ctx.lineTo(points[1].x, points[1].y);
         }
+        ctx.stroke();
+        console.log("done");
     }
 
     updatePathEnd(position: Vec2): void {
