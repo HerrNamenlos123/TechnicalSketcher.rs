@@ -136,7 +136,6 @@ export class PathShape extends Shape {
     }
 
     renderOnCanvas(renderer: CanvasRenderer): void {
-        console.log(this.points.length);
         if (this.points.length < 2) {
             return;
         }
@@ -148,14 +147,12 @@ export class PathShape extends Shape {
         ctx.lineWidth = renderer.objectToCanvasDistance(this.lineWidth);
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
-        console.log(this.points.length);
         if (this.points.length >= 3) {
             for (var i = 1; i < points.length - 2; i++) {
                 var xc = (points[i].x + points[i + 1].x) / 2;
                 var yc = (points[i].y + points[i + 1].y) / 2;
                 ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
             }
-            console.log(i);
             ctx.quadraticCurveTo(
                 points[i].x,
                 points[i].y,
@@ -179,6 +176,10 @@ export class PathShape extends Shape {
     simplify(tolerance: number): void {
         // https://www.youtube.com/watch?v=SbVXh5VtxKw
         // Ramer-Douglas-Peucker Algorithm
+
+        if (tolerance === 0.0) {
+            return;
+        }
 
         const ramerDouglasPeucker = (
             points: Vec2[],

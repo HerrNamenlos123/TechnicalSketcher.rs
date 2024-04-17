@@ -95,7 +95,7 @@ export class LineTool extends Tool {
 export class PenTool extends Tool {
     path: PathShape;
     mouseDown: boolean;
-    tolerance = 0.01;
+    tolerance = 0.0;
 
     constructor(documentRef: TskDocument) {
         super(documentRef);
@@ -116,7 +116,9 @@ export class PenTool extends Tool {
         if (button === "left") {
             this.mouseDown = false;
             if (this.path.isValid()) {
+                // console.log(this.path.points);
                 this.path.simplify(this.tolerance);
+                // console.log(this.path.points);
                 this.documentRef.addShape(this.path);
             }
             this.path = new PathShape();
