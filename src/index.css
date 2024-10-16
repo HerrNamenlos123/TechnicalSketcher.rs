@@ -3,16 +3,4 @@
 @tailwind utilities;
 
 :root {
-  font-family: Roboto, sans-serif;
-  font-style: normal;
-  font-weight: 500;
-}
-
-html,
-body {
-  overflow: hidden;
-
-  /* Disable browser gesture to swipe right to return */
-  overscroll-behavior: none;
-  touch-action: none;
 }
