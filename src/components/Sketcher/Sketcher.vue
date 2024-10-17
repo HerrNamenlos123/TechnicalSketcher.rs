@@ -4,7 +4,7 @@ import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import { TskDocument } from '../types/TskDocument';
 import Toolbar from './Toolbar.vue';
 import { useResizeObserver } from '@vueuse/core';
-import { SelectTool, Tool } from '../types/Tools';
+import { SelectTool } from '../types/Tools';
 
 const props = withDefaults(defineProps<{
   zoomSensitivity: number;
@@ -47,7 +47,7 @@ watch(() => canvasRef.value?.getBoundingClientRect(), () => {
 /// =================================================================
 /// ====                     Tool Selection                      ====
 /// =================================================================
-const selectedToolId = ref("");
+const selectedToolId = ref("select");
 watch(selectedToolId, () => {
   document.value.selectTool(selectedToolId.value);
 }, { immediate: true, deep: true });
@@ -92,6 +92,7 @@ const handleZoom = (newGlobalFactor: number, averagePosition: Vec2) => {
 }
 
 const handleWheel = (e: WheelEvent) => {
+  console.log(e);
   if (e.ctrlKey) {
     const delta = e.deltaX + e.deltaY;
     const newGlobalZoom =
@@ -112,6 +113,8 @@ const moveCanvasCenterTo = (point: Vec2) => {
 }
 
 const updatePointers = () => {
+  return;
+  console.log("Update pointers")
   const nav = document.value.nav;
   const numberOfFingers = nav.eventCache.length;
   if (numberOfFingers === 1) {
@@ -123,6 +126,7 @@ const updatePointers = () => {
       nav.lastAveragePosition = averagePosition;
       return;
     }
+    console.log("Average", averagePosition, nav.lastAveragePosition);
     handlePanDelta(averagePosition.sub(nav.lastAveragePosition));
     nav.lastAveragePosition = averagePosition;
     return;
@@ -169,6 +173,8 @@ const updatePointers = () => {
 }
 
 const pointerDownHandler = (e: PointerEvent) => {
+  console.log("Pointer down")
+  return;
   const nav = document.value.nav;
   if (e.pointerType == "touch") {
     nav.eventCache.push(e);
@@ -200,6 +206,8 @@ const pointerDownHandler = (e: PointerEvent) => {
 }
 
 const pointerMoveHandler = (e: PointerEvent) => {
+  console.log("Move")
+  return;
   const nav = document.value.nav;
   if (e.pointerType == "touch") {
     const index = nav.eventCache.findIndex(
@@ -227,6 +235,8 @@ const pointerMoveHandler = (e: PointerEvent) => {
 }
 
 const pointerUpHandler = (e: PointerEvent) => {
+  console.log("Pointer up")
+  return;
   const nav = document.value.nav;
   if (e.pointerType == "touch") {
     const index = nav.eventCache.findIndex(
@@ -333,22 +343,39 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div ref="canvasWrapper" class="absolute w-full h-full flex">
-    <Toolbar v-model:selected-tool="selectedToolId" />
-    <canvas
-      ref="canvasRef"
-      class="w-full h-full select-none"
-      tabIndex="0"
-      @keydown="handleKeyUp"
-      @keyup="handleKeyDown"
-      @mousemove="onMouseMove"
-      @pointercancel="pointerUpHandler"
-      @pointerdown="pointerDownHandler"
-      @pointerleave="pointerUpHandler"
-      @pointermove="pointerMoveHandler"
-      @pointerout="pointerUpHandler"
-      @pointerup="pointerUpHandler"
-      @wheel="handleWheel"
-    />
+  <div ref="canvasWrapper" class="w-full h-full flex">
+    <!-- <Toolbar v-model:selected-tool="selectedToolId" /> -->
+    <!-- <div v-if="false" class="absolute z-100 w-64 h-64 bg-red-500 canvass" @pointerdown="console.log('pointer down')"> -->
+    <!-- </div> -->
+    <div class="w-full h-full bg-green-500" id="map" />
+      <!-- ref="canvasRef" -->
+      <!-- tabIndex="0" -->
+    <!-- <canvas -->
+    <!--   v-if="false" -->
+    <!--   class="w-full h-full select-none canvas" -->
+    <!-- /> -->
   </div>
 </template>
+
+<style scoped>
+canvas div {
+  touch-action: none;
+}
+
+#map {
+  height: 150vh;
+  width: 70vw;
+  background: linear-gradient(blue, green);
+  touch-action: none;
+}
+</style>
+      <!-- @keydown="handleKeyUp" -->
+      <!-- @keyup="handleKeyDown" -->
+      <!-- @mousemove="onMouseMove" -->
+      <!-- @pointercancel="pointerUpHandler" -->
+      <!-- @pointerdown="pointerDownHandler" -->
+      <!-- @pointerleave="pointerUpHandler" -->
+      <!-- @pointermove="pointerMoveHandler" -->
+      <!-- @pointerout="pointerUpHandler" -->
+      <!-- @pointerup="pointerUpHandler" -->
+      <!-- @wheel="handleWheel" -->
