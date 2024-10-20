@@ -1,30 +1,37 @@
 <script setup lang="ts">
-import { Vec2 } from '../types/Vector';
-import { ref, onMounted, computed, watch, nextTick } from 'vue';
-import { TskDocument } from '../types/TskDocument';
-import Toolbar from './Toolbar.vue';
-import { useResizeObserver } from '@vueuse/core';
-import { SelectTool } from '../types/Tools';
+import { Vec2 } from "../types/Vector";
+import { ref, onMounted, computed, watch, nextTick } from "vue";
+import { TskDocument } from "../types/TskDocument";
+import Toolbar from "./Toolbar.vue";
+import { useResizeObserver } from "@vueuse/core";
+import { PenTool, SelectTool } from "../types/Tools";
+import SvgGrid from "./SvgGrid.vue";
 
-const props = withDefaults(defineProps<{
-  zoomSensitivity: number;
-  invertMouse: boolean;
-  snapToGridCM: number;
-  minZoomFactor?: number;
-  maxZoomFactor?: number;
-}>(), {
-  minZoomFactor: 1,
-  maxZoomFactor: 500,
-});
+const props = withDefaults(
+  defineProps<{
+    zoomSensitivity: number;
+    invertMouse: boolean;
+    snapToGridCM: number;
+    minZoomFactor?: number;
+    maxZoomFactor?: number;
+  }>(),
+  {
+    minZoomFactor: 0.1,
+    maxZoomFactor: 100,
+  },
+);
 
 /// =================================================================
 /// ====                         Canvas                          ====
 /// =================================================================
 const canvasWrapper = ref<HTMLDivElement | null>(null);
-const canvasRef = ref<HTMLCanvasElement | null>(null);
-const canvasContext = computed(() => canvasRef.value?.getContext("2d"));
+const svgRef = ref<SVGSVGElement | null>(null);
 
 const document = ref(new TskDocument());
+onMounted(async () => {
+  await nextTick();
+  document.value.svgRef = svgRef.value;
+});
 
 /// =================================================================
 /// ====                     Mouse Position                      ====
@@ -33,25 +40,25 @@ const onMouseMove = (e: MouseEvent) => {
   document.value.globalMousePosition.x = e.clientX;
   document.value.globalMousePosition.y = e.clientY;
   document.value.onCursorMove();
-}
-
-watch(() => canvasRef.value?.getBoundingClientRect(), () => {
-  const rect = canvasRef.value?.getBoundingClientRect();
-  if (!rect) {
-    return;
-  }
-  document.value.canvasClientBoundingRect.x = rect.left;
-  document.value.canvasClientBoundingRect.y = rect.top;
-}, { immediate: true, deep: true });
+};
 
 /// =================================================================
 /// ====                     Tool Selection                      ====
 /// =================================================================
-const selectedToolId = ref("select");
-watch(selectedToolId, () => {
-  document.value.selectTool(selectedToolId.value);
-}, { immediate: true, deep: true });
+const selectedToolId = ref("pen");
+watch(
+  selectedToolId,
+  () => {
+    document.value.selectTool(selectedToolId.value);
+  },
+  { immediate: true, deep: true },
+);
 
+const previewPathData = computed(() => {
+  if (document.value.selectedTool instanceof PenTool) {
+    return document.value.selectedTool.getPathData();
+  }
+});
 
 const handleKeyDown = (e: KeyboardEvent) => {
   document.value.handleKey(e.code);
@@ -59,21 +66,22 @@ const handleKeyDown = (e: KeyboardEvent) => {
     document.value.shiftPressed = true;
   }
   document.value.onCursorMove();
-}
+};
 
 const handleKeyUp = (e: KeyboardEvent) => {
   if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
     document.value.shiftPressed = false;
   }
   document.value.onCursorMove();
-}
+};
 
 const handlePanDelta = (delta: Vec2) => {
   document.value.pan = document.value.pan.add(delta);
-}
+};
 
 const handleZoom = (newGlobalFactor: number, averagePosition: Vec2) => {
-  const averageInCanvasCoords = document.value.globalCoordsToCanvasCoords(averagePosition);
+  const averageInCanvasCoords =
+    document.value.globalCoordsToCanvasCoords(averagePosition);
   const averageToPrevPan = document.value.pan.sub(averageInCanvasCoords);
 
   if (newGlobalFactor > props.maxZoomFactor) {
@@ -84,15 +92,14 @@ const handleZoom = (newGlobalFactor: number, averagePosition: Vec2) => {
   }
 
   const scaledAverageToPan = averageToPrevPan.mul(
-    newGlobalFactor / document.value.zoom
+    newGlobalFactor / document.value.zoom,
   );
 
   document.value.pan = averageInCanvasCoords.add(scaledAverageToPan);
   document.value.zoom = newGlobalFactor;
-}
+};
 
 const handleWheel = (e: WheelEvent) => {
-  console.log(e);
   if (e.ctrlKey) {
     const delta = e.deltaX + e.deltaY;
     const newGlobalZoom =
@@ -106,27 +113,24 @@ const handleWheel = (e: WheelEvent) => {
     }
     handlePanDelta(delta);
   }
-}
+};
 
 const moveCanvasCenterTo = (point: Vec2) => {
   document.value.pan = point;
-}
+};
 
 const updatePointers = () => {
-  return;
-  console.log("Update pointers")
   const nav = document.value.nav;
   const numberOfFingers = nav.eventCache.length;
   if (numberOfFingers === 1) {
     const averagePosition = new Vec2(
       nav.eventCache[0].clientX,
-      nav.eventCache[0].clientY
+      nav.eventCache[0].clientY,
     );
     if (!nav.lastAveragePosition) {
       nav.lastAveragePosition = averagePosition;
       return;
     }
-    console.log("Average", averagePosition, nav.lastAveragePosition);
     handlePanDelta(averagePosition.sub(nav.lastAveragePosition));
     nav.lastAveragePosition = averagePosition;
     return;
@@ -139,11 +143,11 @@ const updatePointers = () => {
 
   const finger1 = new Vec2(
     nav.eventCache[0].clientX,
-    nav.eventCache[0].clientY
+    nav.eventCache[0].clientY,
   );
   const finger2 = new Vec2(
     nav.eventCache[1].clientX,
-    nav.eventCache[1].clientY
+    nav.eventCache[1].clientY,
   );
   const averagePosition = finger1.add(finger2).div(2);
   const fingerDistance = finger2.sub(finger1).mag();
@@ -166,28 +170,27 @@ const updatePointers = () => {
     fingerDistance / nav.initialZoomFingerDistance;
   handleZoom(
     nav.initialZoomFactor * fingerDistanceScaleFactor,
-    averagePosition
+    averagePosition,
   );
 
   nav.lastAveragePosition = averagePosition;
-}
+};
 
 const pointerDownHandler = (e: PointerEvent) => {
-  console.log("Pointer down")
-  return;
   const nav = document.value.nav;
+  document.value.shiftPressed = e.shiftKey;
   if (e.pointerType == "touch") {
     nav.eventCache.push(e);
     nav.initialZoomFingerDistance = undefined;
     nav.lastAveragePosition = undefined;
     nav.initialZoomFactor = undefined;
     updatePointers();
+    document.value.cursorPreviewEnabled = false;
   } else if (e.pointerType == "mouse") {
     const mousePos = new Vec2(e.clientX, e.clientY);
     if (e.buttons === 4 || (e.shiftKey && e.buttons == 1)) {
       nav.prevMousePosition = mousePos;
     }
-    document.value.shiftPressed = e.shiftKey;
     switch (e.button) {
       case 0:
         document.value.onCursorDown("left");
@@ -199,22 +202,24 @@ const pointerDownHandler = (e: PointerEvent) => {
         document.value.onCursorDown("right");
         break;
     }
+    document.value.cursorPreviewEnabled = false;
   } else if (e.pointerType == "pen") {
-    document.value.shiftPressed = e.shiftKey;
-    // document.onCursorDown("left");
+    document.value.onCursorDown("left");
+    document.value.cursorPreviewEnabled = false;
+    document.value.mouseCursorHidden = true;
   }
-}
+};
 
 const pointerMoveHandler = (e: PointerEvent) => {
-  console.log("Move")
-  return;
   const nav = document.value.nav;
+  document.value.shiftPressed = e.shiftKey;
   if (e.pointerType == "touch") {
     const index = nav.eventCache.findIndex(
-      (cachedEv) => cachedEv.pointerId === e.pointerId
+      (cachedEv) => cachedEv.pointerId === e.pointerId,
     );
     nav.eventCache[index] = e;
     updatePointers();
+    document.value.cursorPreviewEnabled = false;
   } else if (e.pointerType == "mouse") {
     const mouse = new Vec2(e.clientX, e.clientY);
     if (
@@ -226,21 +231,20 @@ const pointerMoveHandler = (e: PointerEvent) => {
       handlePanDelta(mouse.sub(nav.prevMousePosition));
     }
     nav.prevMousePosition = mouse;
-    document.value.shiftPressed = e.shiftKey;
+    document.value.cursorPreviewEnabled = false;
   } else if (e.pointerType == "pen") {
     const pen = new Vec2(e.clientX, e.clientY);
     nav.prevMousePosition = pen;
-    document.value.shiftPressed = e.shiftKey;
+    onMouseMove(e);
+    document.value.onCursorMove();
   }
-}
+};
 
-const pointerUpHandler = (e: PointerEvent) => {
-  console.log("Pointer up")
-  return;
+const pointerUpHandler = (e: PointerEvent, type: "up" | "leave") => {
   const nav = document.value.nav;
   if (e.pointerType == "touch") {
     const index = nav.eventCache.findIndex(
-      (cachedEv) => cachedEv.pointerId === e.pointerId
+      (cachedEv) => cachedEv.pointerId === e.pointerId,
     );
     if (index !== -1) {
       nav.eventCache.splice(index, 1);
@@ -265,33 +269,10 @@ const pointerUpHandler = (e: PointerEvent) => {
   } else if (e.pointerType == "pen") {
     document.value.shiftPressed = e.shiftKey;
     document.value.onCursorUp("left");
+    document.value.cursorPreviewEnabled = true;
+    document.value.mouseCursorHidden = false;
   }
-}
-
-onMounted(() => {
-  // const canvas = canvasRef.value;
-  // if (canvas) {
-  //   const context = canvas.getContext("2d");
-  //   if (context) {
-  //     this.setState({ canvasContext: context });
-  //     this.moveCanvasCenterToPoint(
-  //       new Vec2(
-  //         context.canvas.width / 2,
-  //         context.canvas.height / 2
-  //       )
-  //     );
-  //     this.canvasRenderer = new CanvasRenderer(this.state, context);
-  //   }
-  // }
-});
-
-// const componentDidUpdate = () => {
-// if (state.canvasContext) {
-//   if (canvasRenderer.value) {
-//     canvasRenderer.value.renderCanvas(this.state);
-//   }
-// }
-// }
+};
 
 //     const drawCircle = (
 //         position: Vec2,
@@ -313,69 +294,101 @@ onMounted(() => {
 //     }
 
 const renderCanvas = async () => {
-  if (!canvasWrapper.value || !canvasRef.value) {
+  if (!canvasWrapper.value || !svgRef.value) {
     return;
   }
-  canvasRef.value.width = canvasRef.value?.getBoundingClientRect().width;
-  canvasRef.value.height = canvasRef.value?.getBoundingClientRect().height;
-  const ctx = canvasContext.value;
+  // svgRef.value.width = svgRef.value?.getBoundingClientRect().width;
+  // svgRef.value.height = svgRef.value?.getBoundingClientRect().height;
+  // const ctx = canvasContext.value;
 
-  if (ctx) {
-    ctx.fillStyle = 'white'
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    document.value.render(ctx);
-  }
-}
+  // if (ctx) {
+  //   ctx.fillStyle = "white";
+  //   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  //   document.value.render(ctx);
+  // }
+};
 
-watch(
-  document,
-  () => {
-    renderCanvas();
-  },
-  { immediate: true, deep: true }
-);
+// watch(
+//   document,
+//   () => {
+//     renderCanvas();
+//   },
+//   { immediate: true, deep: true },
+// );
 
-useResizeObserver(canvasWrapper, () => renderCanvas());
-onMounted(async () => {
-  await nextTick();
-  renderCanvas();
-})
+useResizeObserver(canvasWrapper, () => {});
+// onMounted(async () => {
+//   await nextTick();
+//   renderCanvas();
+// });
+const svgViewbox = computed(() => {
+  const size = document.value.svgSize();
+  const center = document.value.canvasToObjectCoords(new Vec2());
+  const height = size.y / document.value.zoom;
+  const width = size.x / document.value.zoom;
+  return `${center.x} ${center.y} ${width} ${height}`;
+});
 </script>
 
 <template>
-  <div ref="canvasWrapper" class="w-full h-full flex">
-    <!-- <Toolbar v-model:selected-tool="selectedToolId" /> -->
-    <!-- <div v-if="false" class="absolute z-100 w-64 h-64 bg-red-500 canvass" @pointerdown="console.log('pointer down')"> -->
-    <!-- </div> -->
-    <div class="w-full h-full bg-green-500" id="map" />
-      <!-- ref="canvasRef" -->
-      <!-- tabIndex="0" -->
+  <div ref="canvasWrapper" class="relative w-full h-full flex">
+    <Toolbar v-model:selected-tool="selectedToolId" />
+    <svg
+      ref="svgRef"
+      class="w-full h-full select-none bg-white"
+      :viewBox="svgViewbox"
+      @keydown="handleKeyUp"
+      @keyup="handleKeyDown"
+      @pointercancel="pointerUpHandler($event, 'leave')"
+      @pointerdown="pointerDownHandler"
+      @pointerleave="pointerUpHandler($event, 'leave')"
+      @pointermove="pointerMoveHandler"
+      @pointerout="pointerUpHandler($event, 'leave')"
+      @pointerup="pointerUpHandler($event, 'leave')"
+      @wheel="handleWheel"
+    >
+      <line
+        :x1="0"
+        :y1="0"
+        :x2="10"
+        :y2="10"
+        stroke="red"
+        :stroke-width="0.1"
+      />
+    </svg>
+    <svg class="absolute w-full h-full select-none pointer-events-none">
+      <SvgGrid :document="document" />
+    </svg>
+    <svg
+      class="absolute w-full h-full select-none pointer-events-none"
+      :viewBox="svgViewbox"
+    >
+      <path v-if="previewPathData" :d="previewPathData" />
+    </svg>
     <!-- <canvas -->
-    <!--   v-if="false" -->
-    <!--   class="w-full h-full select-none canvas" -->
+    <!--   ref="canvasRef" -->
+    <!--   class="w-full h-full select-none" -->
+    <!--   move="onMouseMove" -->
+    <!--   tabIndex="0" -->
+    <!--   :class="{ -->
+    <!--     'cursor-none': document.mouseCursorHidden -->
+    <!--   }" -->
+    <!--   @keydown="handleKeyUp" -->
+    <!--   @keyup="handleKeyDown" -->
+    <!--   @mousedown="pointerDownHandler" -->
+    <!--   @pointercancel="pointerUpHandler($event, 'leave')" -->
+    <!--   @pointerdown="pointerDownHandler" -->
+    <!--   @pointerleave="pointerUpHandler($event, 'leave')" -->
+    <!--   @pointermove="pointerMoveHandler" -->
+    <!--   @pointerout="pointerUpHandler($event, 'leave')" -->
+    <!--   @pointerup="pointerUpHandler($event, 'leave')" -->
+    <!--   @wheel="handleWheel" -->
     <!-- /> -->
   </div>
 </template>
 
 <style scoped>
-canvas div {
-  touch-action: none;
-}
-
-#map {
-  height: 150vh;
-  width: 70vw;
-  background: linear-gradient(blue, green);
+svg {
   touch-action: none;
 }
 </style>
-      <!-- @keydown="handleKeyUp" -->
-      <!-- @keyup="handleKeyDown" -->
-      <!-- @mousemove="onMouseMove" -->
-      <!-- @pointercancel="pointerUpHandler" -->
-      <!-- @pointerdown="pointerDownHandler" -->
-      <!-- @pointerleave="pointerUpHandler" -->
-      <!-- @pointermove="pointerMoveHandler" -->
-      <!-- @pointerout="pointerUpHandler" -->
-      <!-- @pointerup="pointerUpHandler" -->
-      <!-- @wheel="handleWheel" -->

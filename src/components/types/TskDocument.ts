@@ -9,11 +9,12 @@ import { Vec2 } from "./Vector";
 
 export class TskDocument {
   pan = new Vec2();
-  zoom = 100;
+  zoom = 10;
   cursorPreviewPos = new Vec2();
   cursorPreviewEnabled = true;
+  mouseCursorHidden = true;
 
-  canvasClientBoundingRect = new Vec2();
+  svgRef = null as SVGSVGElement | null;
   shiftPressed = true;
   globalMousePosition = new Vec2();
   rawCursorPosition = new Vec2();
@@ -56,7 +57,11 @@ export class TskDocument {
   /// =================================================================
 
   globalCoordsToCanvasCoords(coords: Vec2) {
-    return coords.sub(this.canvasClientBoundingRect);
+    const r = this.svgRef?.getBoundingClientRect();
+    if (!r) {
+      throw new Error("FATAL ERROR: In TskDocument, svgRef.value is null!");
+    }
+    return coords.sub(new Vec2(r.left, r.top));
   }
 
   mousePosOnCanvas() {
@@ -83,6 +88,14 @@ export class TskDocument {
     const cursorpos = this.canvasToObjectCoords(this.mousePosOnCanvas());
     // return this.shiftPressed ? cursorpos : cursorpos.round();
     return cursorpos;
+  }
+
+  svgSize() {
+    const r = this.svgRef?.getBoundingClientRect();
+    if (!r) {
+      return new Vec2();
+    }
+    return new Vec2(r.width, r.height);
   }
 
   /// =================================================================
@@ -189,6 +202,8 @@ export class TskDocument {
     this.renderGrid(ctx);
     this.shapes.map((shape) => shape.renderOnCanvas(this, ctx));
     this.selectedTool.renderOnCanvas(ctx);
-    this.renderCursorDot(ctx);
+    if (this.cursorPreviewEnabled) {
+      this.renderCursorDot(ctx);
+    }
   }
 }
