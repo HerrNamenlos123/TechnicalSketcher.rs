@@ -6,6 +6,7 @@ import Toolbar from "./Toolbar.vue";
 import { useResizeObserver } from "@vueuse/core";
 import { PenTool, SelectTool } from "../types/Tools";
 import SvgGrid from "./SvgGrid.vue";
+import { CircleShape, PathShape } from "../types/Shapes";
 
 const props = withDefaults(
   defineProps<{
@@ -39,7 +40,7 @@ onMounted(async () => {
 const onMouseMove = (e: MouseEvent) => {
   document.value.globalMousePosition.x = e.clientX;
   document.value.globalMousePosition.y = e.clientY;
-  document.value.onCursorMove();
+  document.value.onCursorMove(0);
 };
 
 /// =================================================================
@@ -65,14 +66,14 @@ const handleKeyDown = (e: KeyboardEvent) => {
   if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
     document.value.shiftPressed = true;
   }
-  document.value.onCursorMove();
+  document.value.onCursorMove(0);
 };
 
 const handleKeyUp = (e: KeyboardEvent) => {
   if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
     document.value.shiftPressed = false;
   }
-  document.value.onCursorMove();
+  document.value.onCursorMove(0);
 };
 
 const handlePanDelta = (delta: Vec2) => {
@@ -193,18 +194,18 @@ const pointerDownHandler = (e: PointerEvent) => {
     }
     switch (e.button) {
       case 0:
-        document.value.onCursorDown("left");
+        document.value.onCursorDown("left", e.pressure);
         break;
       case 1:
-        document.value.onCursorDown("wheel");
+        document.value.onCursorDown("wheel", e.pressure);
         break;
       case 2:
-        document.value.onCursorDown("right");
+        document.value.onCursorDown("right", e.pressure);
         break;
     }
     document.value.cursorPreviewEnabled = false;
   } else if (e.pointerType == "pen") {
-    document.value.onCursorDown("left");
+    document.value.onCursorDown("left", e.pressure);
     document.value.cursorPreviewEnabled = false;
     document.value.mouseCursorHidden = true;
   }
@@ -236,7 +237,7 @@ const pointerMoveHandler = (e: PointerEvent) => {
     const pen = new Vec2(e.clientX, e.clientY);
     nav.prevMousePosition = pen;
     onMouseMove(e);
-    document.value.onCursorMove();
+    document.value.onCursorMove(e.pressure);
   }
 };
 
@@ -308,13 +309,13 @@ const renderCanvas = async () => {
   // }
 };
 
-// watch(
-//   document,
-//   () => {
-//     renderCanvas();
-//   },
-//   { immediate: true, deep: true },
-// );
+watch(
+  document,
+  () => {
+    // console.log(document.value.shapes);
+  },
+  { immediate: true, deep: true },
+);
 
 useResizeObserver(canvasWrapper, () => {});
 // onMounted(async () => {
@@ -347,14 +348,16 @@ const svgViewbox = computed(() => {
       @pointerup="pointerUpHandler($event, 'leave')"
       @wheel="handleWheel"
     >
-      <line
-        :x1="0"
-        :y1="0"
-        :x2="10"
-        :y2="10"
-        stroke="red"
-        :stroke-width="0.1"
-      />
+      <template v-for="shape in document.shapes" :key="shape">
+        <path v-if="shape instanceof PathShape" :d="shape.getPathData()" />
+        <circle
+          v-else-if="shape instanceof CircleShape"
+          :cx="shape.center.x"
+          :cy="shape.center.y"
+          :r="shape.radius"
+          fill="red"
+        />
+      </template>
     </svg>
     <svg class="absolute w-full h-full select-none pointer-events-none">
       <SvgGrid :document="document" />

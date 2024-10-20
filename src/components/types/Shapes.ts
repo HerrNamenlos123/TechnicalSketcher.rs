@@ -1,3 +1,4 @@
+import getStroke, { type StrokeOptions } from "perfect-freehand";
 import { BoundingBox } from "./BoundingBox";
 import type { TskDocument } from "./TskDocument";
 import { Vec2 } from "./Vector";
@@ -123,15 +124,13 @@ export class CircleShape extends Shape {
 }
 
 export class PathShape extends Shape {
-  points: Vec2[];
-  lineColor: string;
-  lineWidth: number;
+  points = [] as number[][];
+  lineColor = "black";
+  options: StrokeOptions;
 
-  constructor() {
+  constructor(options: StrokeOptions) {
     super();
-    this.points = [];
-    this.lineColor = "black";
-    this.lineWidth = 0.05;
+    this.options = options;
   }
 
   getBoundingBox(): BoundingBox {
@@ -142,94 +141,122 @@ export class PathShape extends Shape {
     documentRef: TskDocument,
     ctx: CanvasRenderingContext2D,
   ): void {
-    if (this.points.length < 2) {
-      return;
-    }
-    // https://www.youtube.com/watch?v=DLsqkWV6Cag
-    // Catmull-Rom Splines algorithm
-    const points = this.points.map((p) => documentRef.objectToCanvasCoords(p));
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = documentRef.objectToCanvasDistance(this.lineWidth);
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    if (this.points.length >= 3) {
-      for (var i = 1; i < points.length - 2; i++) {
-        const xc = (points[i].x + points[i + 1].x) / 2;
-        const yc = (points[i].y + points[i + 1].y) / 2;
-        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
-      }
-      ctx.quadraticCurveTo(
-        points[i].x,
-        points[i].y,
-        points[i + 1].x,
-        points[i + 1].y,
-      );
-    } else {
-      ctx.lineTo(points[1].x, points[1].y);
-    }
-    ctx.stroke();
+    //   if (this.points.length < 2) {
+    //     return;
+    //   }
+    //   // https://www.youtube.com/watch?v=DLsqkWV6Cag
+    //   // Catmull-Rom Splines algorithm
+    //   const points = this.points.map((p) => documentRef.objectToCanvasCoords(p));
+    //   ctx.strokeStyle = "black";
+    //   ctx.lineWidth = documentRef.objectToCanvasDistance(this.lineWidth);
+    //   ctx.beginPath();
+    //   ctx.moveTo(points[0].x, points[0].y);
+    //   if (this.points.length >= 3) {
+    //     for (var i = 1; i < points.length - 2; i++) {
+    //       const xc = (points[i].x + points[i + 1].x) / 2;
+    //       const yc = (points[i].y + points[i + 1].y) / 2;
+    //       ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+    //     }
+    //     ctx.quadraticCurveTo(
+    //       points[i].x,
+    //       points[i].y,
+    //       points[i + 1].x,
+    //       points[i + 1].y,
+    //     );
+    //   } else {
+    //     ctx.lineTo(points[1].x, points[1].y);
+    //   }
+    //   ctx.stroke();
   }
 
-  updatePathEnd(position: Vec2): void {
-    this.points.push(position);
+  setFirstPoint(position: Vec2, pressure: number): void {
+    this.points = [[position.x, position.y, pressure]];
+  }
+
+  appendPoint(position: Vec2, pressure: number): void {
+    this.points.push([position.x, position.y, pressure]);
+  }
+
+  clearPoints() {
+    this.points = [];
   }
 
   isValid(): boolean {
     return this.points.length >= 2;
   }
 
-  simplify(tolerance: number): void {
-    // https://www.youtube.com/watch?v=SbVXh5VtxKw
-    // Ramer-Douglas-Peucker Algorithm
+  getSvgPathFromStroke(stroke: number[][]) {
+    if (!stroke.length) return "";
 
-    if (tolerance === 0.0) {
-      return;
-    }
+    const d = stroke.reduce(
+      (acc, [x0, y0], i, arr) => {
+        const [x1, y1] = arr[(i + 1) % arr.length];
+        acc.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
+        return acc;
+      },
+      ["M", ...stroke[0], "Q"],
+    );
 
-    const ramerDouglasPeucker = (points: Vec2[], tolerance: number): Vec2[] => {
-      if (points.length <= 2) {
-        return points;
-      }
-
-      let newPoints: Vec2[] = []; // make line from start to end
-      const line = new Line(points[0], points[points.length - 1]);
-      // find the largest distance from intermediate poitns to this line
-      let maxDistance = 0;
-      let maxDistanceIndex = 0;
-      for (let i = 1; i <= points.length - 2; i++) {
-        const distance = line.distanceToPoint(points[i]);
-        if (distance > maxDistance) {
-          maxDistance = distance;
-          maxDistanceIndex = i;
-        }
-      }
-      // check if the max distance is greater than our tollerance allows
-      if (maxDistance >= tolerance) {
-        line.distanceToPoint(points[maxDistanceIndex]);
-        // include this point in the output
-        newPoints = newPoints.concat(
-          ramerDouglasPeucker(points.slice(0, maxDistanceIndex + 1), tolerance),
-        );
-        // returnPoints.push( points[maxDistanceIndex] );
-        newPoints = newPoints.concat(
-          ramerDouglasPeucker(
-            points.slice(maxDistanceIndex, points.length),
-            tolerance,
-          ),
-        );
-      } else {
-        // ditching this point
-        line.distanceToPoint(points[maxDistanceIndex]);
-        newPoints = [points[0]];
-      }
-      return newPoints;
-    };
-
-    const newPoints = ramerDouglasPeucker(this.points, tolerance);
-    // always have to push the very last point on so it doesn't get left off
-    newPoints.push(this.points[this.points.length - 1]);
-    this.points = newPoints;
+    d.push("Z");
+    return d.join(" ");
   }
+
+  getPathData() {
+    return this.getSvgPathFromStroke(getStroke(this.points, this.options));
+  }
+
+  // simplify(tolerance: number): void {
+  //   // https://www.youtube.com/watch?v=SbVXh5VtxKw
+  //   // Ramer-Douglas-Peucker Algorithm
+
+  //   if (tolerance === 0.0) {
+  //     return;
+  //   }
+
+  //   const ramerDouglasPeucker = (points: Vec2[], tolerance: number): Vec2[] => {
+  //     if (points.length <= 2) {
+  //       return points;
+  //     }
+
+  //     let newPoints: Vec2[] = []; // make line from start to end
+  //     const line = new Line(points[0], points[points.length - 1]);
+  //     // find the largest distance from intermediate poitns to this line
+  //     let maxDistance = 0;
+  //     let maxDistanceIndex = 0;
+  //     for (let i = 1; i <= points.length - 2; i++) {
+  //       const distance = line.distanceToPoint(points[i]);
+  //       if (distance > maxDistance) {
+  //         maxDistance = distance;
+  //         maxDistanceIndex = i;
+  //       }
+  //     }
+  //     // check if the max distance is greater than our tollerance allows
+  //     if (maxDistance >= tolerance) {
+  //       line.distanceToPoint(points[maxDistanceIndex]);
+  //       // include this point in the output
+  //       newPoints = newPoints.concat(
+  //         ramerDouglasPeucker(points.slice(0, maxDistanceIndex + 1), tolerance),
+  //       );
+  //       // returnPoints.push( points[maxDistanceIndex] );
+  //       newPoints = newPoints.concat(
+  //         ramerDouglasPeucker(
+  //           points.slice(maxDistanceIndex, points.length),
+  //           tolerance,
+  //         ),
+  //       );
+  //     } else {
+  //       // ditching this point
+  //       line.distanceToPoint(points[maxDistanceIndex]);
+  //       newPoints = [points[0]];
+  //     }
+  //     return newPoints;
+  //   };
+
+  //   const newPoints = ramerDouglasPeucker(this.points, tolerance);
+  //   // always have to push the very last point on so it doesn't get left off
+  //   newPoints.push(this.points[this.points.length - 1]);
+  //   this.points = newPoints;
+  // }
 }
 
 export class RectangleShape extends Shape {

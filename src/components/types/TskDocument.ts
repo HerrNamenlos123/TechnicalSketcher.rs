@@ -123,16 +123,20 @@ export class TskDocument {
     }
   }
 
-  onCursorDown(shapeClickType: ShapeClickType): void {
-    this.selectedTool.onCursorDown(this.cursorPosition(), shapeClickType);
+  onCursorDown(shapeClickType: ShapeClickType, pressure: number): void {
+    this.selectedTool.onCursorDown(
+      this.cursorPosition(),
+      shapeClickType,
+      pressure,
+    );
   }
 
   onCursorUp(shapeClickType: ShapeClickType): void {
     this.selectedTool.onCursorUp(this.cursorPosition(), shapeClickType);
   }
 
-  onCursorMove(): void {
-    this.selectedTool.onCursorMove(this.cursorPosition());
+  onCursorMove(pressure: number): void {
+    this.selectedTool.onCursorMove(this.cursorPosition(), pressure);
   }
 
   handleKey(code: string): void {

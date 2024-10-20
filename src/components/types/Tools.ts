@@ -1,5 +1,5 @@
-import getStroke from "perfect-freehand";
-import { LineShape, PathShape } from "./Shapes";
+import type { StrokeOptions } from "perfect-freehand";
+import { CircleShape, LineShape, PathShape } from "./Shapes";
 import { TskDocument } from "./TskDocument";
 import { Vec2 } from "./Vector";
 import { reactive } from "vue";
@@ -12,9 +12,13 @@ export abstract class Tool {
     this.documentRef = documentRef;
   }
   abstract deselectTool(): void;
-  abstract onCursorDown(position: Vec2, button: MouseButton): void;
+  abstract onCursorDown(
+    position: Vec2,
+    button: MouseButton,
+    pressure: number,
+  ): void;
   abstract onCursorUp(position: Vec2, button: MouseButton): void;
-  abstract onCursorMove(position: Vec2): void;
+  abstract onCursorMove(position: Vec2, pressure: number): void;
   abstract handleKey(code: string): void;
   abstract renderOnCanvas(context: CanvasRenderingContext2D): void;
 }
@@ -33,7 +37,7 @@ export class SelectTool extends Tool {
 
   handleKey(code: string): void {}
 
-  renderOnCanvas(renderer: CanvasRenderer): void {}
+  renderOnCanvas(renderer: CanvasRenderingContext2D): void {}
 }
 
 export class LineTool extends Tool {
@@ -59,7 +63,6 @@ export class LineTool extends Tool {
         });
       } else {
         this.preview.end = position;
-        console.log(this.preview.end, this.preview.start);
         if (!this.preview.start.equal(this.preview.end)) {
           this.documentRef.addShape(this.preview);
         }
@@ -92,17 +95,11 @@ export class LineTool extends Tool {
 }
 
 export class PenTool extends Tool {
-  // path: PathShape;
-  points = reactive<number[][]>([]);
-  mouseDown: boolean;
-  tolerance = 0.0;
-  debugPoints = true;
-
-  options = {
+  options: StrokeOptions = {
     size: 6,
-    thinning: 0,
-    smoothing: 1,
-    streamline: 0.2,
+    thinning: 0.5,
+    smoothing: 0.8,
+    streamline: 0.6,
     easing: (t) => t,
     start: {
       taper: 0,
@@ -114,20 +111,26 @@ export class PenTool extends Tool {
       easing: (t) => t,
       cap: true,
     },
+    simulatePressure: false,
   };
+
+  path = reactive(new PathShape(this.options));
+  mouseDown: boolean;
+  tolerance = 0.0;
+  debugPoints = true;
 
   constructor(documentRef: TskDocument) {
     super(documentRef);
-    // this.path = new PathShape();
     this.mouseDown = false;
   }
 
   deselectTool(): void {}
 
-  onCursorDown(position: Vec2, button: MouseButton): void {
+  onCursorDown(position: Vec2, button: MouseButton, pressure: number): void {
     if (button === "left") {
       this.mouseDown = true;
-      this.points = [[position.x, position.y, 0 /* e.pressure */]];
+      this.path = new PathShape(this.options);
+      this.path.setFirstPoint(position, pressure);
     } else if (button === "right") {
     }
   }
@@ -135,32 +138,35 @@ export class PenTool extends Tool {
   onCursorUp(position: Vec2, button: MouseButton): void {
     if (button === "left") {
       this.mouseDown = false;
+      if (this.path.isValid()) {
+        this.documentRef.addShape(this.path);
+      }
       // if (this.path.isValid()) {
       //   // console.log(this.path.points);
       //   // this.path.simplify(this.tolerance);
       //   // console.log(this.path.points);
       //   this.documentRef.addShape(this.path);
-      //   if (this.debugPoints) {
-      //     for (const point of this.path.points) {
-      //       this.documentRef.addShape(
-      //         new LineShape(point, point, {
-      //           lineWidth: 0.01,
-      //           lineColor: "red",
-      //           lineCap: "round",
-      //         }),
-      //       );
-      //     }
-      //   }
+      if (this.debugPoints) {
+        for (const [x, y, pressure] of this.path.points) {
+          this.documentRef.addShape(
+            new CircleShape(new Vec2(x, y), 0.1, {
+              lineWidth: 0,
+              lineColor: "red",
+            }),
+          );
+        }
+      }
       // }
       // this.path = new PathShape();
     } else if (button === "right") {
     }
+    this.path = new PathShape(this.options);
+    console.log("sds");
   }
 
-  onCursorMove(position: Vec2): void {
+  onCursorMove(position: Vec2, pressure: number): void {
     if (this.mouseDown) {
-      // this.path.updatePathEnd(position);
-      this.points.push([position.x, position.y, 1 /* pressure */]);
+      this.path.appendPoint(position, pressure);
     }
   }
 
@@ -169,24 +175,8 @@ export class PenTool extends Tool {
     }
   }
 
-  getSvgPathFromStroke(stroke: number[][]) {
-    if (!stroke.length) return "";
-
-    const d = stroke.reduce(
-      (acc, [x0, y0], i, arr) => {
-        const [x1, y1] = arr[(i + 1) % arr.length];
-        acc.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
-        return acc;
-      },
-      ["M", ...stroke[0], "Q"],
-    );
-
-    d.push("Z");
-    return d.join(" ");
-  }
-
   getPathData() {
-    return this.getSvgPathFromStroke(getStroke(this.points, this.options));
+    return this.path.getPathData();
   }
 
   renderOnCanvas(ctx: CanvasRenderingContext2D): void {
