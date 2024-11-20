@@ -356,7 +356,7 @@ const svgViewbox = computed(() => {
       @pointerup="pointerUpHandler($event, 'leave')"
       @wheel="handleWheel"
     >
-      <!-- <SvgShapes :shapes="document.shapes" /> -->
+      <SvgShapes :shapes="document.shapes" />
     </svg>
     <svg class="absolute w-full h-full select-none pointer-events-none">
       <SvgGrid :document="document" />
@@ -365,7 +365,7 @@ const svgViewbox = computed(() => {
       class="absolute w-full h-full select-none pointer-events-none"
       :viewBox="svgViewbox"
     >
-      <!-- <path v-if="previewPathData" :d="previewPathData" /> -->
+      <path v-if="previewPathData" :d="previewPathData" />
     </svg>
     <!-- <canvas -->
     <!--   ref="canvasRef" -->
