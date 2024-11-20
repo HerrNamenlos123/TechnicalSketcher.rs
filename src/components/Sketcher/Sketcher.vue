@@ -6,7 +6,8 @@ import Toolbar from "./Toolbar.vue";
 import { useResizeObserver } from "@vueuse/core";
 import { PenTool, SelectTool } from "../types/Tools";
 import SvgGrid from "./SvgGrid.vue";
-import { CircleShape, PathShape } from "../types/Shapes";
+import SvgShapes from "./SvgShapes.vue";
+import { defineStore } from "pinia";
 
 const props = withDefaults(
   defineProps<{
@@ -28,7 +29,14 @@ const props = withDefaults(
 const canvasWrapper = ref<HTMLDivElement | null>(null);
 const svgRef = ref<SVGSVGElement | null>(null);
 
-const document = ref(new TskDocument());
+const useStore = defineStore("document", {
+  state: () => ({
+    document: new TskDocument(),
+  }),
+});
+
+// const document = ref(new TskDocument());
+const document = computed(() => useStore().document);
 onMounted(async () => {
   await nextTick();
   document.value.svgRef = svgRef.value;
@@ -57,7 +65,7 @@ watch(
 
 const previewPathData = computed(() => {
   if (document.value.selectedTool instanceof PenTool) {
-    return document.value.selectedTool.getPathData();
+    return document.value.getPreviewPathData();
   }
 });
 
@@ -348,16 +356,7 @@ const svgViewbox = computed(() => {
       @pointerup="pointerUpHandler($event, 'leave')"
       @wheel="handleWheel"
     >
-      <template v-for="shape in document.shapes" :key="shape">
-        <path v-if="shape instanceof PathShape" :d="shape.getPathData()" />
-        <circle
-          v-else-if="shape instanceof CircleShape"
-          :cx="shape.center.x"
-          :cy="shape.center.y"
-          :r="shape.radius"
-          fill="red"
-        />
-      </template>
+      <!-- <SvgShapes :shapes="document.shapes" /> -->
     </svg>
     <svg class="absolute w-full h-full select-none pointer-events-none">
       <SvgGrid :document="document" />
@@ -366,7 +365,7 @@ const svgViewbox = computed(() => {
       class="absolute w-full h-full select-none pointer-events-none"
       :viewBox="svgViewbox"
     >
-      <path v-if="previewPathData" :d="previewPathData" />
+      <!-- <path v-if="previewPathData" :d="previewPathData" /> -->
     </svg>
     <!-- <canvas -->
     <!--   ref="canvasRef" -->

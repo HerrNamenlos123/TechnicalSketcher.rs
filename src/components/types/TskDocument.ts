@@ -125,18 +125,18 @@ export class TskDocument {
 
   onCursorDown(shapeClickType: ShapeClickType, pressure: number): void {
     this.selectedTool.onCursorDown(
-      this.cursorPosition(),
+      this.mousePosOnCanvas(),
       shapeClickType,
       pressure,
     );
   }
 
   onCursorUp(shapeClickType: ShapeClickType): void {
-    this.selectedTool.onCursorUp(this.cursorPosition(), shapeClickType);
+    this.selectedTool.onCursorUp(this.mousePosOnCanvas(), shapeClickType);
   }
 
   onCursorMove(pressure: number): void {
-    this.selectedTool.onCursorMove(this.cursorPosition(), pressure);
+    this.selectedTool.onCursorMove(this.mousePosOnCanvas(), pressure);
   }
 
   handleKey(code: string): void {
@@ -145,6 +145,12 @@ export class TskDocument {
 
   addShape(shape: Shape): void {
     this.shapes.push(shape);
+  }
+
+  getPreviewPathData() {
+    if (this.selectedTool instanceof PenTool) {
+      return this.selectedTool.getPreviewPathData();
+    }
   }
 
   /// =================================================================

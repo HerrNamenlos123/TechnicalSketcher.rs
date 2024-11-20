@@ -96,10 +96,10 @@ export class LineTool extends Tool {
 
 export class PenTool extends Tool {
   options: StrokeOptions = {
-    size: 6,
-    thinning: 0.5,
-    smoothing: 0.8,
-    streamline: 0.6,
+    size: 1,
+    thinning: 0.0,
+    smoothing: 0.0,
+    streamline: 0,
     easing: (t) => t,
     start: {
       taper: 0,
@@ -116,8 +116,8 @@ export class PenTool extends Tool {
 
   path = reactive(new PathShape(this.options));
   mouseDown: boolean;
-  tolerance = 0.0;
-  debugPoints = true;
+  tolerance = 0.1;
+  debugPoints = false;
 
   constructor(documentRef: TskDocument) {
     super(documentRef);
@@ -138,12 +138,12 @@ export class PenTool extends Tool {
   onCursorUp(position: Vec2, button: MouseButton): void {
     if (button === "left") {
       this.mouseDown = false;
+      // this.path.simplify(this.tolerance);
       if (this.path.isValid()) {
         this.documentRef.addShape(this.path);
       }
       // if (this.path.isValid()) {
       //   // console.log(this.path.points);
-      //   // this.path.simplify(this.tolerance);
       //   // console.log(this.path.points);
       //   this.documentRef.addShape(this.path);
       if (this.debugPoints) {
@@ -161,7 +161,6 @@ export class PenTool extends Tool {
     } else if (button === "right") {
     }
     this.path = new PathShape(this.options);
-    console.log("sds");
   }
 
   onCursorMove(position: Vec2, pressure: number): void {
@@ -175,8 +174,8 @@ export class PenTool extends Tool {
     }
   }
 
-  getPathData() {
-    return this.path.getPathData();
+  getPreviewPathData() {
+    return this.path.getPreviewPathData(this.documentRef);
   }
 
   renderOnCanvas(ctx: CanvasRenderingContext2D): void {

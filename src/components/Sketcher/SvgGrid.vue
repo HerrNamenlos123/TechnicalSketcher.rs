@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onUpdated } from "vue";
 import type { Vec2 } from "../types/Vector";
 import { TskDocument } from "../types/TskDocument";
 
@@ -49,6 +49,10 @@ const horizontalLinesY = computed(() => {
     lines.push(y);
   }
   return lines;
+});
+
+onUpdated(() => {
+  console.log("Grid updated");
 });
 </script>
 
